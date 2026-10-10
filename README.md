@@ -21,6 +21,7 @@ Progress (bag total, remaining cards, stats) is saved in the browser's `localSto
   | Immortal  | 10%       | ×20        |
 
 - You start with 3 cards; **Get Cards** adds 3 more (free in the prototype).
+- The tray shows every card you hold. The card being played right now is first, with a gold glow and a **NOW** tag.
 
 ## Upgrades
 
