@@ -22,7 +22,7 @@ Progress (💎 total, remaining cards, the card in play with its opened tiles, u
 
 - You start with 3 cards; **Get Cards** adds 3 more (free in the prototype).
 - The tray shows every card you hold. The card being played right now is first, with a gold glow and a **NOW** tag.
-- On a win, 💎 burst out of the winning tiles and fly into the counter — more gems for higher rarities (`gems` in `CONFIG.rarities`).
+- On a win, 💎 burst out of the winning tiles and fly into the counter — more gems for higher rarities (`gems` in `CONFIG.rarities`). If the device has reduce motion turned on (e.g. Windows "Animation effects" off), the counter glows and counts up instead.
 
 ## Upgrades
 

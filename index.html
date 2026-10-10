@@ -41,6 +41,8 @@
   .title .info { width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: var(--ink); font-size: 18px; display: grid; place-items: center; border: 2px solid var(--ink); }
   .bag { background: #2b2140; color: #fff; border-radius: 999px; padding: 4px 14px; font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 6px; transition: transform .2s; }
   .bag.bump { transform: scale(1.25); }
+  .bag.shine { animation: shine .45s ease-in-out 2 alternate; }
+  @keyframes shine { to { box-shadow: 0 0 0 3px #7fe3ff, 0 0 18px 6px rgba(127,227,255,.9); background: #3a2d6b; } }
 
   /* main panel */
   .panel {
@@ -227,7 +229,7 @@
   </div>
 
   <div class="bottom">
-    <div class="version">v0.8 <!-- bump on every push --></div>
+    <div class="version">v0.9 <!-- bump on every push --></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
   </div>
 </div>
@@ -517,14 +519,26 @@ function win(sym) {
     countUp($('popReward'), reward, n => `💎 × ${n}`);
   };
   const shown = n => { $('bagCount').textContent = n; $('bag').classList.add('bump'); setTimeout(() => $('bag').classList.remove('bump'), 120); };
+  if (reducedMotion()) {
+    // Players who asked for less motion get a sparkle + count-up on the counter instead of flying gems
+    setTimeout(() => {
+      $('bag').classList.add('shine');
+      countUp($('bagCount'), save.bag, n => n, 700, before);
+      [1200, 1500].forEach((f, i) => tone(f, 0.08, 'sine', i * 0.12, 0.08));
+      setTimeout(() => { $('bag').classList.remove('shine'); showPopup(); }, 900);
+    }, 500);
+    return;
+  }
   setTimeout(() => gemBurst(document.querySelectorAll('.tile.win'), CONFIG.rarities[round.rarity].gems,
     (i, count) => { shown(Math.round(before + reward * (i + 1) / count)); tone(1200 + i * 40, 0.05, 'sine', 0, 0.08); },
     () => setTimeout(showPopup, 250)), 500);
 }
 
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 // Gems pop out of the winning tiles, scatter, then fly into the 💎 counter.
 function gemBurst(fromEls, count, onArrive, onDone) {
-  if (!fromEls.length || !Element.prototype.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (!fromEls.length || !Element.prototype.animate) {
     onArrive(count - 1, count); onDone(); return;
   }
   const bag = $('bag').getBoundingClientRect();
@@ -547,11 +561,11 @@ function gemBurst(fromEls, count, onArrive, onDone) {
   }
 }
 
-function countUp(el, to, fmt, ms = 600) {
+function countUp(el, to, fmt, ms = 600, from = 0) {
   const start = performance.now();
   const step = now => {
     const t = Math.min(1, (now - start) / ms);
-    el.textContent = fmt(Math.round(to * (1 - (1 - t) ** 3)));
+    el.textContent = fmt(Math.round(from + (to - from) * (1 - (1 - t) ** 3)));
     if (t < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
