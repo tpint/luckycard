@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#b98cf0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Lucky Scratch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple: #b07ff0;
+    --purple-dark: #8a55d6;
+    --purple-deep: #6a3bb5;
+    --paper: #f4efe0;
+    --paper-inner: #e7e6ea;
+    --gold: #ffd84a;
+    --ink: #3a2a55;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Baloo 2", system-ui, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(180deg, #8fc3ff 0%, #c9b8f5 35%, #d8b5f2 70%, #e6c2f5 100%);
+    background-attachment: fixed;
+    display: flex; justify-content: center;
+    overflow-x: hidden;
+    user-select: none; -webkit-user-select: none;
+  }
+  .app {
+    width: 100%; max-width: 440px; min-height: 100%;
+    padding: max(14px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  /* header */
+  .top { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px; }
+  .title { font-size: 26px; font-weight: 800; color: #fff; text-shadow: 0 2px 0 rgba(60,30,110,.35); display: flex; align-items: center; gap: 6px; }
+  .title .info { width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: var(--ink); font-size: 18px; display: grid; place-items: center; border: 2px solid var(--ink); }
+  .bag { background: #2b2140; color: #fff; border-radius: 999px; padding: 4px 14px; font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 6px; transition: transform .2s; }
+  .bag.bump { transform: scale(1.25); }
+
+  /* main panel */
+  .panel {
+    background: var(--purple);
+    border-radius: 28px 28px 22px 22px;
+    padding: 10px 10px 14px;
+    box-shadow: inset 0 3px 0 rgba(255,255,255,.35), 0 6px 0 var(--purple-dark);
+  }
+  .rate { text-align: center; color: #fff; font-weight: 700; font-size: 18px; margin: 2px 0 8px; opacity: .95; }
+  .prizes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .prize {
+    position: relative; border-radius: 10px; padding: 4px 34px 6px 6px; min-height: 58px;
+    display: flex; flex-direction: column; justify-content: center;
+    transition: transform .25s, box-shadow .25s;
+  }
+  .prize:nth-child(1) { background: #ffe066; }
+  .prize:nth-child(2) { background: #dfe8f2; }
+  .prize:nth-child(3) { background: #efe2c6; }
+  .prize .label { font-size: 13px; font-weight: 700; color: #c7552a; line-height: 1; }
+  .prize:nth-child(2) .label { color: #5a6a80; }
+  .prize:nth-child(3) .label { color: #8a7650; }
+  .prize .slots { display: flex; gap: 0; font-size: 14px; margin-top: 3px; }
+  .prize .slots span { filter: grayscale(1) opacity(.35); transition: filter .2s, transform .2s; }
+  .prize .slots span.on { filter: none; transform: scale(1.15); }
+  .prize .reward { position: absolute; right: -4px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%; background: radial-gradient(#5a3a8c, #2b1d48); border: 3px solid var(--purple-dark); display: grid; place-items: center; font-size: 18px; }
+  .prize .reward b { position: absolute; right: -3px; bottom: -4px; background: #2b1d48; color: #fff; font-size: 11px; border-radius: 4px; padding: 0 4px; line-height: 15px; }
+  .prize.hot { animation: wobble .5s ease-in-out infinite alternate; }
+  .prize.won { box-shadow: 0 0 0 3px #fff, 0 0 18px 6px var(--gold); transform: scale(1.06); }
+  @keyframes wobble { from { transform: rotate(-1.5deg); } to { transform: rotate(1.5deg); } }
+
+  .hint { text-align: center; color: #fff; font-size: 14px; font-weight: 500; margin: 10px 0 8px; background: var(--purple-dark); border-radius: 12px; padding: 4px 8px; }
+  .hint em { color: var(--gold); font-style: normal; font-weight: 700; }
+
+  /* ticket */
+  .ticket {
+    background: var(--paper); border-radius: 12px; padding: 12px;
+    border: 4px solid var(--paper); transition: border-color .3s;
+    position: relative;
+  }
+  .ticket[data-type="blue"] { border-color: #7fb8ff; }
+  .ticket[data-type="gold"] { border-color: #ffb43a; }
+  .board {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+    background: var(--paper-inner); border-radius: 8px; padding: 10px;
+    touch-action: none;
+  }
+  .tile { position: relative; aspect-ratio: 1; min-width: 0; }
+  .tile .face {
+    position: absolute; inset: 4%; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff, #f1ecff);
+    display: grid; place-items: center;
+    font-size: clamp(26px, 9vw, 40px);
+    box-shadow: inset 0 0 0 3px #d9d0ef;
+  }
+  .tile canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity .25s; }
+  .tile.revealed canvas { opacity: 0; pointer-events: none; }
+  .tile.revealed .face { animation: pop .3s ease-out; }
+  .tile.active .face { box-shadow: inset 0 0 0 3px var(--gold); }
+  .tile.pair .face { box-shadow: inset 0 0 0 3px #ff8ad0, 0 0 10px #ff8ad0; }
+  .tile.win .face { box-shadow: inset 0 0 0 4px var(--gold), 0 0 16px 4px var(--gold); animation: winpulse .6s ease-in-out infinite alternate; }
+  .tile.dim { opacity: .45; }
+  @keyframes pop { 0% { transform: scale(.6); } 70% { transform: scale(1.12); } 100% { transform: scale(1); } }
+  @keyframes winpulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+
+  .empty {
+    position: absolute; inset: 0; display: none; place-items: center; text-align: center;
+    background: rgba(244,239,224,.92); border-radius: 8px; font-weight: 700; font-size: 18px; padding: 20px;
+  }
+  .ticket.no-card .empty { display: grid; }
+
+  /* tray */
+  .tray { display: flex; align-items: center; gap: 10px; }
+  .cards { flex: 1; display: flex; gap: 4px; background: rgba(120,70,190,.35); border-radius: 10px; padding: 6px; min-height: 70px; overflow-x: auto; scrollbar-width: none; }
+  .card { flex: 0 0 42px; height: 58px; border-radius: 6px; border: 2px solid #fff; background: #a576e6; display: grid; place-items: center; color: rgba(255,255,255,.7); font-size: 18px; }
+  .card.blue { background: #6fa8f2; }
+  .card.gold { background: #ffa83a; }
+  .cards .none { color: #fff; opacity: .8; font-size: 14px; align-self: center; padding-left: 6px; }
+  .get {
+    border: none; font: inherit; font-weight: 700; font-size: 16px; color: var(--ink);
+    background: #fff; border-radius: 999px; padding: 8px 14px; box-shadow: 0 3px 0 #9c86c4;
+    cursor: pointer;
+  }
+  .get:active { transform: translateY(2px); box-shadow: 0 1px 0 #9c86c4; }
+
+  .bottom { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #5b4580; padding: 0 4px; }
+  .mode { display: flex; background: rgba(255,255,255,.5); border-radius: 999px; padding: 3px; }
+  .mode button { border: none; background: none; font: inherit; font-weight: 700; padding: 3px 12px; border-radius: 999px; color: #5b4580; cursor: pointer; }
+  .mode button.on { background: #fff; color: var(--ink); }
+  .stats { text-align: right; line-height: 1.3; }
+  .reset { background: none; border: none; color: #5b4580; text-decoration: underline; font: inherit; cursor: pointer; padding: 0; }
+
+  /* win popup */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(40,20,70,.55); display: none;
+    place-items: center; z-index: 10; padding: 16px;
+  }
+  .overlay.show { display: grid; animation: fade .2s; }
+  .popup {
+    background: #fff; border-radius: 24px; padding: 22px 28px; text-align: center; width: min(320px, 100%);
+    box-shadow: 0 8px 0 var(--purple-dark); animation: pop .35s ease-out;
+  }
+  .popup h2 { margin: 0; font-size: 30px; color: var(--purple-deep); }
+  .popup .big { font-size: 56px; line-height: 1.2; }
+  .popup p { margin: 4px 0 16px; font-size: 20px; font-weight: 700; }
+  .popup button { border: none; font: inherit; font-weight: 800; font-size: 18px; color: #fff; background: var(--purple-dark); border-radius: 999px; padding: 10px 28px; box-shadow: 0 4px 0 var(--purple-deep); cursor: pointer; }
+  @keyframes fade { from { opacity: 0; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="title"><span class="info">!</span>Lucky Scratch</div>
+    <div class="bag" id="bag">📜 <span id="bagCount">0</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="rate">✦ 100% Win Rate ✦</div>
+    <div class="prizes" id="prizes"></div>
+    <div class="hint">Scratch off <em>3 matching patterns</em> to win the corresponding item.</div>
+    <div class="ticket" id="ticket">
+      <div class="board" id="board"></div>
+      <div class="empty">No cards left.<br>Tap “Get Cards”!</div>
+    </div>
+  </div>
+
+  <div class="tray">
+    <div class="cards" id="cards"></div>
+    <button class="get" id="getCards">🃏 Get Cards</button>
+  </div>
+
+  <div class="bottom">
+    <div class="mode" id="mode">
+      <button data-mode="scratch">Scratch</button>
+      <button data-mode="tap">Tap</button>
+    </div>
+    <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="popup">
+    <h2 id="popTitle">1st Prize!</h2>
+    <div class="big" id="popIcon">👑</div>
+    <p id="popReward">📜 × 3</p>
+    <button id="popBtn">Next card</button>
+  </div>
+</div>
+
+<script>
+// ---------- Tuning knobs (edit these to playtest different feels) ----------
+const CONFIG = {
+  tiles: 16,              // 4x4 grid
+  startCards: 5,
+  cardsPerRefill: 5,      // "Get Cards" is free in the prototype
+  scratchClearRatio: 0.5, // fraction of the coin you must scratch before it auto-reveals
+  brushSize: 0.16,        // scratch brush radius, relative to tile size
+  // How many of each losing pattern show up before the win (more 2s = more near-misses)
+  loserCountWeights: [20, 35, 45], // weights for 0, 1, 2 copies
+  prizes: [
+    { name: '1st Prize', icon: '👑', reward: 3 },
+    { name: '2nd Prize', icon: '💧', reward: 2 },
+    { name: '3rd Prize', icon: '🧤', reward: 1 },
+  ],
+  // Chance of each prize (1st, 2nd, 3rd) depends on the card colour
+  cardTypes: {
+    purple: { weight: 70, odds: [10, 30, 60] },
+    blue:   { weight: 22, odds: [20, 40, 40] },
+    gold:   { weight: 8,  odds: [45, 35, 20] },
+  },
+};
+
+// ---------- State ----------
+const $ = id => document.getElementById(id);
+const store = {
+  get() { try { return JSON.parse(localStorage.getItem('lucky-scratch')) } catch { return null } },
+  set(v) { try { localStorage.setItem('lucky-scratch', JSON.stringify(v)) } catch {} },
+};
+let save = store.get() || { bag: 0, cards: [], played: 0, wins: [0, 0, 0], mode: 'scratch', fresh: true };
+if (save.fresh) { save.cards = Array.from({ length: CONFIG.startCards }, randomCardType); save.fresh = false; }
+
+let round = null; // { type, winner, sequence, step, counts, done }
+let activeTile = null;
+
+// ---------- Helpers ----------
+function pickWeighted(weights) {
+  let r = Math.random() * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < weights.length; i++) { if ((r -= weights[i]) < 0) return i; }
+  return weights.length - 1;
+}
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function randomCardType() {
+  const types = Object.keys(CONFIG.cardTypes);
+  return types[pickWeighted(types.map(t => CONFIG.cardTypes[t].weight))];
+}
+
+// The result is decided when the card starts (like the real game's "100% win rate").
+// Whichever tile you open next shows the next symbol in this sequence,
+// and the 3rd copy of the winning symbol is always the last one.
+function buildSequence(winner) {
+  const seq = [winner, winner];
+  CONFIG.prizes.forEach((_, i) => {
+    if (i === winner) return;
+    const n = pickWeighted(CONFIG.loserCountWeights);
+    for (let k = 0; k < n; k++) seq.push(i);
+  });
+  shuffle(seq);
+  seq.push(winner);
+  return seq;
+}
+
+// ---------- Sound + haptics ----------
+let audio;
+function tone(freq, dur = 0.08, type = 'sine', when = 0, vol = 0.15) {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const t = audio.currentTime + when;
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dur);
+  } catch {}
+}
+const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms) } catch {} };
+
+// ---------- Rendering ----------
+function renderPrizes() {
+  $('prizes').innerHTML = CONFIG.prizes.map((p, i) => `
+    <div class="prize" data-i="${i}">
+      <div class="label">${p.name}</div>
+      <div class="slots">${`<span>${p.icon}</span>`.repeat(3)}</div>
+      <div class="reward">📜<b>${p.reward}</b></div>
+    </div>`).join('');
+}
+function updatePrizeSlots() {
+  document.querySelectorAll('.prize').forEach((el, i) => {
+    const n = round ? round.counts[i] : 0;
+    el.querySelectorAll('.slots span').forEach((s, k) => s.classList.toggle('on', k < n));
+    el.classList.toggle('hot', n === 2 && !round.done);
+    el.classList.toggle('won', !!round && round.done && round.winner === i);
+  });
+}
+function renderTray() {
+  $('cards').innerHTML = save.cards.length
+    ? save.cards.map(t => `<div class="card ${t}">✦</div>`).join('')
+    : '<span class="none">No cards</span>';
+}
+function renderStats() {
+  $('bagCount').textContent = save.bag;
+  $('stats').textContent = `Played ${save.played} · 👑${save.wins[0]} 💧${save.wins[1]} 🧤${save.wins[2]}`;
+  document.querySelectorAll('#mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === save.mode));
+}
+
+function drawCover(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const size = canvas.clientWidth * dpr;
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const r = size * 0.46, c = size / 2;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.clearRect(0, 0, size, size);
+  const grad = ctx.createRadialGradient(c * 0.8, c * 0.7, r * 0.1, c, c, r);
+  grad.addColorStop(0, '#c9c9cf'); grad.addColorStop(1, '#a9a9b2');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#d6d6dc'; ctx.lineWidth = size * 0.04;
+  ctx.beginPath(); ctx.arc(c, c, r * 0.82, 0, Math.PI * 2); ctx.stroke();
+  ctx.save(); ctx.translate(c, c); ctx.rotate(-0.2);
+  ctx.fillStyle = '#e4e4ea'; ctx.font = `800 ${size * 0.22}px "Baloo 2", sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('Lucky', 0, size * 0.04);
+  ctx.restore();
+  canvas._total = countOpaque(canvas);
+}
+function countOpaque(canvas) {
+  const d = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+  let n = 0;
+  for (let i = 3; i < d.length; i += 4 * 6) if (d[i] > 0) n++;
+  return n;
+}
+
+function dealCard() {
+  const board = $('board');
+  board.innerHTML = '';
+  activeTile = null;
+  if (!save.cards.length) {
+    round = null;
+    $('ticket').classList.add('no-card');
+    $('ticket').dataset.type = '';
+    updatePrizeSlots();
+    return;
+  }
+  $('ticket').classList.remove('no-card');
+  const type = save.cards.shift();
+  const winner = pickWeighted(CONFIG.cardTypes[type].odds);
+  round = { type, winner, sequence: buildSequence(winner), step: 0, counts: [0, 0, 0], done: false };
+  $('ticket').dataset.type = type;
+  for (let i = 0; i < CONFIG.tiles; i++) {
+    const t = document.createElement('div');
+    t.className = 'tile';
+    t.innerHTML = '<div class="face"></div><canvas></canvas>';
+    board.appendChild(t);
+  }
+  requestAnimationFrame(() => board.querySelectorAll('canvas').forEach(drawCover));
+  store.set(save);
+  renderTray(); updatePrizeSlots();
+}
+
+// Assign the next symbol when a tile is first touched, so the face is visible while scratching.
+function activate(tile) {
+  const sym = round.sequence[round.step++];
+  tile.dataset.sym = sym;
+  tile.querySelector('.face').textContent = CONFIG.prizes[sym].icon;
+  tile.classList.add('active');
+  activeTile = tile;
+  tone(520, 0.05, 'triangle');
+}
+
+function reveal(tile) {
+  tile.classList.remove('active');
+  tile.classList.add('revealed');
+  activeTile = null;
+  const sym = +tile.dataset.sym;
+  round.counts[sym]++;
+  const n = round.counts[sym];
+  tone(500 + n * 180, 0.12, 'triangle'); buzz(15);
+  document.querySelectorAll(`.tile.revealed[data-sym="${sym}"]`).forEach(t => t.classList.toggle('pair', n === 2));
+  if (n === 3) win(sym); else updatePrizeSlots();
+}
+
+function win(sym) {
+  round.done = true;
+  const p = CONFIG.prizes[sym];
+  document.querySelectorAll('.tile').forEach(t => {
+    t.classList.remove('pair');
+    if (+t.dataset.sym === sym && t.classList.contains('revealed')) t.classList.add('win');
+    else t.classList.add('dim');
+  });
+  updatePrizeSlots();
+  [660, 830, 990, 1320].forEach((f, i) => tone(f, 0.18, 'triangle', i * 0.09, 0.18)); buzz([30, 40, 60]);
+  save.bag += p.reward; save.played++; save.wins[sym]++;
+  store.set(save);
+  setTimeout(() => {
+    renderStats();
+    $('bag').classList.add('bump'); setTimeout(() => $('bag').classList.remove('bump'), 250);
+    $('popTitle').textContent = p.name + '!';
+    $('popIcon').textContent = p.icon.repeat(3);
+    $('popReward').textContent = `📜 × ${p.reward}`;
+    $('popBtn').textContent = save.cards.length ? 'Next card' : 'OK';
+    $('overlay').classList.add('show');
+  }, 900);
+}
+
+// ---------- Input ----------
+const board = $('board');
+let last = null, moves = 0, downAt = null;
+
+function tileAt(x, y) {
+  const el = document.elementFromPoint(x, y);
+  return el && el.closest('.tile');
+}
+function scratch(tile, x, y) {
+  const canvas = tile.querySelector('canvas');
+  const rect = canvas.getBoundingClientRect();
+  const k = canvas.width / rect.width;
+  const px = (x - rect.left) * k, py = (y - rect.top) * k;
+  const ctx = canvas.getContext('2d');
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.lineCap = 'round'; ctx.lineWidth = canvas.width * CONFIG.brushSize * 2;
+  ctx.beginPath();
+  if (last && last.tile === tile) ctx.moveTo(last.x, last.y); else ctx.moveTo(px, py);
+  ctx.lineTo(px + 0.1, py + 0.1); ctx.stroke();
+  last = { tile, x: px, y: py };
+  if (++moves % 5 === 0) {
+    if (Math.random() < 0.5) tone(180 + Math.random() * 120, 0.03, 'sawtooth', 0, 0.03);
+    if (1 - countOpaque(canvas) / canvas._total >= CONFIG.scratchClearRatio) reveal(tile);
+  }
+}
+function handle(e) {
+  if (!round || round.done) return;
+  const tile = tileAt(e.clientX, e.clientY);
+  if (!tile || tile.classList.contains('revealed')) return;
+  // One tile at a time: finish the current tile before starting another.
+  if (activeTile && tile !== activeTile) return;
+  if (!activeTile) activate(tile);
+  if (save.mode === 'scratch') scratch(tile, e.clientX, e.clientY);
+}
+board.addEventListener('pointerdown', e => {
+  board.setPointerCapture(e.pointerId);
+  downAt = { x: e.clientX, y: e.clientY };
+  last = null;
+  if (save.mode === 'tap') {
+    if (!round || round.done) return;
+    const tile = tileAt(e.clientX, e.clientY);
+    if (!tile || tile.classList.contains('revealed')) return;
+    if (!activeTile) activate(tile);
+    if (tile === activeTile) reveal(tile);
+    return;
+  }
+  handle(e);
+});
+board.addEventListener('pointermove', e => { if (downAt && save.mode === 'scratch') handle(e); });
+const up = () => { downAt = null; last = null; };
+board.addEventListener('pointerup', up);
+board.addEventListener('pointercancel', up);
+
+$('popBtn').onclick = () => { $('overlay').classList.remove('show'); dealCard(); };
+$('getCards').onclick = () => {
+  for (let i = 0; i < CONFIG.cardsPerRefill; i++) save.cards.push(randomCardType());
+  store.set(save); renderTray(); tone(700, 0.1, 'triangle');
+  if (!round) dealCard();
+};
+$('mode').onclick = e => {
+  const m = e.target.dataset.mode; if (!m) return;
+  save.mode = m; store.set(save); renderStats();
+};
+$('reset').onclick = () => {
+  if (!confirm('Reset all progress?')) return;
+  save = { bag: 0, cards: Array.from({ length: CONFIG.startCards }, randomCardType), played: 0, wins: [0, 0, 0], mode: save.mode, fresh: false };
+  store.set(save); $('overlay').classList.remove('show'); renderStats(); dealCard();
+};
+window.addEventListener('resize', () => {
+  // Redraw covers on unscratched tiles if the layout size changes
+  document.querySelectorAll('.tile:not(.revealed):not(.active) canvas').forEach(drawCover);
+});
+
+renderPrizes(); renderStats(); renderTray();
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(dealCard);
+</script>
+</body>
+</html>
