@@ -168,13 +168,38 @@
   .popup p { margin: 4px 0 16px; font-size: 20px; font-weight: 700; }
   .popup button { border: none; font: inherit; font-weight: 800; font-size: 18px; color: #fff; background: var(--purple-dark); border-radius: 999px; padding: 10px 28px; box-shadow: 0 4px 0 var(--purple-deep); cursor: pointer; }
   @keyframes fade { from { opacity: 0; } }
+
+  /* upgrade shop */
+  .top-right { display: flex; align-items: center; gap: 8px; }
+  .shop-btn {
+    border: none; font: inherit; font-weight: 800; font-size: 15px; color: var(--ink);
+    background: var(--gold); border-radius: 999px; padding: 4px 12px; box-shadow: 0 3px 0 #c9a21c; cursor: pointer;
+  }
+  .shop-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #c9a21c; }
+  .popup.shop { width: min(380px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; text-align: left; padding: 18px; }
+  .shop-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .shop-head h2 { font-size: 26px; }
+  .upgrade { display: flex; align-items: center; gap: 10px; background: #f3edfc; border-radius: 14px; padding: 8px 10px; margin-bottom: 8px; }
+  .upgrade .icon { font-size: 28px; }
+  .upgrade .info { flex: 1; min-width: 0; line-height: 1.25; }
+  .upgrade .name { font-weight: 800; font-size: 16px; }
+  .upgrade .name small { color: #8a7aa8; font-weight: 700; }
+  .upgrade .effect { font-size: 13px; color: #5b4580; }
+  .upgrade .effect b { color: var(--purple-deep); }
+  .popup .upgrade button { font-size: 15px; padding: 6px 12px; white-space: nowrap; }
+  .popup .upgrade button:disabled { background: #c9bfd9; box-shadow: 0 4px 0 #a99cbf; cursor: default; }
+  .shop-note { font-size: 12px; color: #8a7aa8; margin: 2px 0 12px; }
+  #shopClose { display: block; margin: 0 auto; }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="top">
     <div class="title"><span class="info">!</span>LuckyCard</div>
-    <div class="bag" id="bag">📜 <span id="bagCount">0</span></div>
+    <div class="top-right">
+      <button class="shop-btn" id="shopBtn">⬆ Upgrades</button>
+      <div class="bag" id="bag">📜 <span id="bagCount">0</span></div>
+    </div>
   </div>
 
   <div class="panel">
@@ -194,7 +219,7 @@
   </div>
 
   <div class="bottom">
-    <div class="version">v0.5 <!-- bump on every push --></div>
+    <div class="version">v0.6 <!-- bump on every push --></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
   </div>
 </div>
@@ -209,12 +234,21 @@
   </div>
 </div>
 
+<div class="overlay" id="shop">
+  <div class="popup shop">
+    <div class="shop-head"><h2>Upgrades</h2><div class="bag">📜 <span id="shopBag">0</span></div></div>
+    <div id="upgrades"></div>
+    <div class="shop-note">Rarity upgrades apply to new cards, not ones already in your tray.</div>
+    <button id="shopClose">Close</button>
+  </div>
+</div>
+
 <script>
 // ---------- Tuning knobs (edit these to playtest different feels) ----------
 const CONFIG = {
   tiles: 16,              // 4x4 grid
-  startCards: 5,
-  cardsPerRefill: 5,      // "Get Cards" is free in the prototype
+  startCards: 3,
+  cardsPerRefill: 3,      // "Get Cards" is free in the prototype
   // How many of each losing pattern show up before the win (more 2s = more near-misses)
   loserCountWeights: [20, 35, 45], // weights for 0, 1, 2 copies
   // Chance of winning each prize (1st, 2nd, 3rd) on any card
@@ -231,6 +265,15 @@ const CONFIG = {
     legendary: { label: 'Legendary', chance: 20, multiplier: 5 },
     immortal:  { label: 'Immortal',  chance: 10, multiplier: 20 },
   },
+  // Upgrades bought with 📜. Cost of the next level = baseCost * costGrowth ^ currentLevel
+  upgrades: {
+    luck:  { name: 'Lucky Draw',    icon: '🍀', max: 10, baseCost: 20, costGrowth: 1.6,
+             rarityBonus: { epic: 2, legendary: 2, immortal: 2 } }, // added to rarity weights per level
+    crown: { name: 'Crown Chance',  icon: '👑', max: 5,  baseCost: 25, costGrowth: 1.7,
+             prizeOddsBonus: [3, 3, -6] },                          // added to prizeOdds per level
+    prize: { name: 'Bigger Prizes', icon: '📜', max: 5,  baseCost: 40, costGrowth: 1.8,
+             rewardBonus: 1 },                                      // added to every prize's base reward per level
+  },
 };
 
 // ---------- State ----------
@@ -240,8 +283,9 @@ const store = {
   get() { try { return JSON.parse(localStorage.getItem(SAVE_KEY)) } catch { return null } },
   set(v) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(v)) } catch {} },
 };
-const newSave = () => ({ bag: 0, cards: Array.from({ length: CONFIG.startCards }, randomRarity), played: 0, wins: [0, 0, 0] });
+const newSave = () => ({ bag: 0, cards: Array.from({ length: CONFIG.startCards }, () => randomRarity(0)), played: 0, wins: [0, 0, 0], upgrades: {} });
 let save = store.get() || newSave();
+save.upgrades = save.upgrades || {}; // saves from before upgrades existed
 
 let round = null; // { rarity, winner, sequence, step, counts, done }
 
@@ -255,11 +299,18 @@ function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 }
-function randomRarity() {
-  const keys = Object.keys(CONFIG.rarities);
-  return keys[pickWeighted(keys.map(k => CONFIG.rarities[k].chance))];
+const lvl = id => save.upgrades[id] || 0;
+const upgradeCost = id => Math.round(CONFIG.upgrades[id].baseCost * CONFIG.upgrades[id].costGrowth ** lvl(id));
+function rarityWeights(luck = lvl('luck')) {
+  const bonus = CONFIG.upgrades.luck.rarityBonus;
+  return Object.keys(CONFIG.rarities).map(k => CONFIG.rarities[k].chance + (bonus[k] || 0) * luck);
 }
-const rewardFor = (prize, rarity) => CONFIG.prizes[prize].reward * (rarity ? CONFIG.rarities[rarity].multiplier : 1);
+function randomRarity(luck = lvl('luck')) {
+  return Object.keys(CONFIG.rarities)[pickWeighted(rarityWeights(luck))];
+}
+const prizeOdds = (crown = lvl('crown')) => CONFIG.prizeOdds.map((o, i) => o + CONFIG.upgrades.crown.prizeOddsBonus[i] * crown);
+const baseReward = (prize, bonus = lvl('prize')) => CONFIG.prizes[prize].reward + CONFIG.upgrades.prize.rewardBonus * bonus;
+const rewardFor = (prize, rarity) => baseReward(prize) * (rarity ? CONFIG.rarities[rarity].multiplier : 1);
 
 // The result is decided when the card starts (like the real game's "100% win rate").
 // Whichever tile you open next shows the next symbol in this sequence,
@@ -314,6 +365,40 @@ function renderTray() {
     ? save.cards.map(r => `<div class="card ${r}" title="${CONFIG.rarities[r].label}">✦</div>`).join('')
     : '<span class="none">No cards</span>';
 }
+const pcts = ws => { const sum = ws.reduce((a, b) => a + b, 0); return ws.map(w => Math.round(w / sum * 100)); };
+// "now → next" for each value, or just "now" at max level
+const change = (labels, now, next, unit = '') =>
+  labels.map((l, i) => next ? `${l} ${now[i]}${unit}→<b>${next[i]}${unit}</b>` : `${l} <b>${now[i]}${unit}</b>`).join(' · ');
+const upgradeEffects = {
+  luck: next => change(Object.values(CONFIG.rarities).map(r => r.label), pcts(rarityWeights()), next && pcts(rarityWeights(lvl('luck') + 1)), '%'),
+  crown: next => change(CONFIG.prizes.map(p => p.icon), pcts(prizeOdds()), next && pcts(prizeOdds(lvl('crown') + 1)), '%'),
+  prize: next => 'Base 📜 ' + change(CONFIG.prizes.map(p => p.icon), CONFIG.prizes.map((_, i) => baseReward(i)), next && CONFIG.prizes.map((_, i) => baseReward(i, lvl('prize') + 1))),
+};
+function renderShop() {
+  $('shopBag').textContent = save.bag;
+  $('upgrades').innerHTML = Object.entries(CONFIG.upgrades).map(([id, u]) => {
+    const maxed = lvl(id) >= u.max, cost = upgradeCost(id);
+    return `
+    <div class="upgrade">
+      <div class="icon">${u.icon}</div>
+      <div class="info">
+        <div class="name">${u.name} <small>Lv ${lvl(id)}/${u.max}</small></div>
+        <div class="effect">${upgradeEffects[id](!maxed)}</div>
+      </div>
+      <button data-id="${id}" ${maxed || save.bag < cost ? 'disabled' : ''}>${maxed ? 'MAX' : `📜 ${cost}`}</button>
+    </div>`;
+  }).join('');
+}
+function buyUpgrade(id) {
+  const cost = upgradeCost(id);
+  if (lvl(id) >= CONFIG.upgrades[id].max || save.bag < cost) return;
+  save.bag -= cost;
+  save.upgrades[id] = lvl(id) + 1;
+  store.set(save);
+  [523, 784].forEach((f, i) => tone(f, 0.12, 'triangle', i * 0.08, 0.15)); buzz(20);
+  renderShop(); renderStats(); renderPrizes();
+}
+
 function renderStats() {
   $('bagCount').textContent = save.bag;
   $('stats').textContent = `Played ${save.played} · 👑${save.wins[0]} 💧${save.wins[1]} 🧤${save.wins[2]}`;
@@ -351,7 +436,7 @@ function dealCard() {
   }
   $('ticket').classList.remove('no-card');
   const rarity = save.cards.shift();
-  const winner = pickWeighted(CONFIG.prizeOdds);
+  const winner = pickWeighted(prizeOdds());
   round = { rarity, winner, sequence: buildSequence(winner), step: 0, counts: [0, 0, 0], done: false };
   $('ticket').dataset.type = rarity;
   $('rarity').textContent = CONFIG.rarities[rarity].label;
@@ -419,6 +504,12 @@ $('getCards').onclick = () => {
   store.set(save); renderTray(); tone(700, 0.1, 'triangle');
   if (!round) dealCard();
 };
+$('shopBtn').onclick = () => { renderShop(); $('shop').classList.add('show'); };
+$('shopClose').onclick = () => $('shop').classList.remove('show');
+$('upgrades').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-id]');
+  if (btn) buyUpgrade(btn.dataset.id);
+});
 $('reset').onclick = () => {
   if (!confirm('Reset all progress?')) return;
   save = newSave();

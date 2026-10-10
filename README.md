@@ -20,11 +20,23 @@ Progress (bag total, remaining cards, stats) is saved in the browser's `localSto
   | Legendary | 20%       | ×5         |
   | Immortal  | 10%       | ×20        |
 
-- You start with 5 cards; **Get Cards** adds 5 more (free in the prototype).
+- You start with 3 cards; **Get Cards** adds 3 more (free in the prototype).
+
+## Upgrades
+
+Tap **⬆ Upgrades** (top right) to spend 📜. Each level costs more than the last.
+
+| Upgrade          | Effect per level                                   | Max | At max level                   |
+|------------------|----------------------------------------------------|-----|--------------------------------|
+| 🍀 Lucky Draw    | Shifts card rarity odds away from Rare             | 10  | Rare 25 / Epic 31 / Legendary 25 / Immortal 19% |
+| 👑 Crown Chance  | Raises 1st and 2nd prize odds, lowers 3rd          | 5   | 👑 25 / 💧 45 / 🧤 30%          |
+| 📜 Bigger Prizes | +1 to every prize's base reward (before rarity ×)  | 5   | 👑 8 / 💧 7 / 🧤 6              |
+
+Lucky Draw only affects newly drawn cards, not cards already in the tray. **reset progress** also resets upgrades.
 
 ## Tuning
 
-All balance values live in the `CONFIG` object at the top of the `<script>` in `index.html`: grid size, starting cards, refill size, prize odds and rewards, rarity drop rates and multipliers, and how often near-misses appear.
+All balance values live in the `CONFIG` object at the top of the `<script>` in `index.html`: grid size, starting cards, refill size, prize odds and rewards, rarity drop rates and multipliers, upgrade costs and effects (`CONFIG.upgrades`), and how often near-misses appear.
 
 ## Versioning
 
