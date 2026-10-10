@@ -43,3 +43,9 @@ All balance values live in the `CONFIG` object at the top of the `<script>` in `
 ## Versioning
 
 The version shown at the bottom-left of the page is set by hand in `index.html` (`<div class="version">`). Bump it on every push so you can tell which build you're testing.
+
+## Development
+
+- **Codespaces:** on GitHub, **Code → Codespaces → Create codespace on main**. The `.devcontainer` sets up Node, the Live Preview extension (open `index.html` → "Show Preview"), Claude Code, and Playwright with Chromium. Forwarded port 3000 lets you open the game on a phone.
+- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (refresh resume, gem burst, popup, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first.
+- **Before every push:** bump the version label, update this README, run `npm test` (see `CLAUDE.md`).

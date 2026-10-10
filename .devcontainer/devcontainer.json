@@ -1,0 +1,12 @@
+{
+  "name": "LuckyCard",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-vscode.live-server", "anthropic.claude-code"]
+    }
+  },
+  "forwardPorts": [3000],
+  "portsAttributes": { "3000": { "label": "Game", "onAutoForward": "openBrowser" } },
+  "postCreateCommand": "npm install && npx playwright install --with-deps chromium"
+}

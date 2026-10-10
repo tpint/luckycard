@@ -1,0 +1,11 @@
+{
+  "name": "luckycard",
+  "private": true,
+  "description": "LuckyCard scratch-card game prototype",
+  "scripts": {
+    "test": "node tests/check.js"
+  },
+  "devDependencies": {
+    "playwright": "1.64.0"
+  }
+}
