@@ -80,12 +80,32 @@
     border: 4px solid var(--paper); transition: border-color .3s;
     position: relative;
   }
-  .ticket[data-type="blue"] { border-color: #7fb8ff; }
-  .ticket[data-type="gold"] { border-color: #ffb43a; }
+  .ticket[data-type="rare"] { border-color: #5fa2f5; }
+  .ticket[data-type="epic"] { border-color: #ff9a3c; }
+  .ticket[data-type="legendary"] { border-color: #ffd23f; box-shadow: 0 0 14px rgba(255,210,63,.8); }
+  .ticket[data-type="immortal"] {
+    border-color: transparent;
+    background: linear-gradient(var(--paper), var(--paper)) padding-box,
+                linear-gradient(90deg, #ff3b6b, #b44dff, #3bd1ff, #ffd23f, #ff3b6b) border-box;
+    background-size: 100% 100%, 300% 100%;
+    animation: shimmer 2.5s linear infinite;
+    box-shadow: 0 0 18px rgba(180,77,255,.8);
+  }
+  @keyframes shimmer { to { background-position: 0 0, 300% 0; } }
+  .rarity {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%); z-index: 2;
+    font-size: 13px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
+    color: #fff; padding: 1px 12px; border-radius: 999px; border: 2px solid #fff;
+    background: #5fa2f5; white-space: nowrap;
+  }
+  .ticket[data-type="epic"] .rarity { background: #ff9a3c; }
+  .ticket[data-type="legendary"] .rarity { background: #f2b800; }
+  .ticket[data-type="immortal"] .rarity { background: linear-gradient(90deg, #ff3b6b, #b44dff, #3bd1ff); }
+  .ticket[data-type=""] .rarity { display: none; }
   .board {
     display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
     background: var(--paper-inner); border-radius: 8px; padding: 10px;
-    touch-action: none;
+    touch-action: manipulation;
   }
   .tile { position: relative; aspect-ratio: 1; min-width: 0; }
   .tile .face {
@@ -95,10 +115,11 @@
     font-size: clamp(26px, 9vw, 40px);
     box-shadow: inset 0 0 0 3px #d9d0ef;
   }
-  .tile canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity .25s; }
+  .tile canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity .25s, transform .1s; }
   .tile.revealed canvas { opacity: 0; pointer-events: none; }
   .tile.revealed .face { animation: pop .3s ease-out; }
-  .tile.active .face { box-shadow: inset 0 0 0 3px var(--gold); }
+  .tile:not(.revealed) { cursor: pointer; }
+  .tile:not(.revealed):active canvas { transform: scale(.92); }
   .tile.pair .face { box-shadow: inset 0 0 0 3px #ff8ad0, 0 0 10px #ff8ad0; }
   .tile.win .face { box-shadow: inset 0 0 0 4px var(--gold), 0 0 16px 4px var(--gold); animation: winpulse .6s ease-in-out infinite alternate; }
   .tile.dim { opacity: .45; }
@@ -115,8 +136,10 @@
   .tray { display: flex; align-items: center; gap: 10px; }
   .cards { flex: 1; display: flex; gap: 4px; background: rgba(120,70,190,.35); border-radius: 10px; padding: 6px; min-height: 70px; overflow-x: auto; scrollbar-width: none; }
   .card { flex: 0 0 42px; height: 58px; border-radius: 6px; border: 2px solid #fff; background: #a576e6; display: grid; place-items: center; color: rgba(255,255,255,.7); font-size: 18px; }
-  .card.blue { background: #6fa8f2; }
-  .card.gold { background: #ffa83a; }
+  .card.rare { background: #5fa2f5; }
+  .card.epic { background: #ff9a3c; }
+  .card.legendary { background: #ffd23f; color: rgba(140,90,0,.6); box-shadow: 0 0 8px #ffd23f; }
+  .card.immortal { background: linear-gradient(135deg, #ff3b6b, #b44dff, #3bd1ff); box-shadow: 0 0 10px #b44dff; color: #fff; }
   .cards .none { color: #fff; opacity: .8; font-size: 14px; align-self: center; padding-left: 6px; }
   .get {
     border: none; font: inherit; font-weight: 700; font-size: 16px; color: var(--ink);
@@ -126,9 +149,6 @@
   .get:active { transform: translateY(2px); box-shadow: 0 1px 0 #9c86c4; }
 
   .bottom { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #5b4580; padding: 0 4px; }
-  .mode { display: flex; background: rgba(255,255,255,.5); border-radius: 999px; padding: 3px; }
-  .mode button { border: none; background: none; font: inherit; font-weight: 700; padding: 3px 12px; border-radius: 999px; color: #5b4580; cursor: pointer; }
-  .mode button.on { background: #fff; color: var(--ink); }
   .stats { text-align: right; line-height: 1.3; }
   .reset { background: none; border: none; color: #5b4580; text-decoration: underline; font: inherit; cursor: pointer; padding: 0; }
 
@@ -159,8 +179,9 @@
   <div class="panel">
     <div class="rate">✦ 100% Win Rate ✦</div>
     <div class="prizes" id="prizes"></div>
-    <div class="hint">Scratch off <em>3 matching patterns</em> to win the corresponding item.</div>
-    <div class="ticket" id="ticket">
+    <div class="hint">Tap to open tiles. Find <em>3 matching patterns</em> to win the corresponding item.</div>
+    <div class="ticket" id="ticket" data-type="">
+      <div class="rarity" id="rarity"></div>
       <div class="board" id="board"></div>
       <div class="empty">No cards left.<br>Tap “Get Cards”!</div>
     </div>
@@ -172,16 +193,14 @@
   </div>
 
   <div class="bottom">
-    <div class="mode" id="mode">
-      <button data-mode="scratch">Scratch</button>
-      <button data-mode="tap">Tap</button>
-    </div>
+    <div></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
   </div>
 </div>
 
 <div class="overlay" id="overlay">
   <div class="popup">
+    <div id="popRarity" style="font-weight:800;text-transform:uppercase;font-size:14px;letter-spacing:.5px"></div>
     <h2 id="popTitle">1st Prize!</h2>
     <div class="big" id="popIcon">👑</div>
     <p id="popReward">📜 × 3</p>
@@ -195,34 +214,35 @@ const CONFIG = {
   tiles: 16,              // 4x4 grid
   startCards: 5,
   cardsPerRefill: 5,      // "Get Cards" is free in the prototype
-  scratchClearRatio: 0.5, // fraction of the coin you must scratch before it auto-reveals
-  brushSize: 0.16,        // scratch brush radius, relative to tile size
   // How many of each losing pattern show up before the win (more 2s = more near-misses)
   loserCountWeights: [20, 35, 45], // weights for 0, 1, 2 copies
+  // Chance of winning each prize (1st, 2nd, 3rd) on any card
+  prizeOdds: [10, 30, 60],
   prizes: [
     { name: '1st Prize', icon: '👑', reward: 3 },
     { name: '2nd Prize', icon: '💧', reward: 2 },
     { name: '3rd Prize', icon: '🧤', reward: 1 },
   ],
-  // Chance of each prize (1st, 2nd, 3rd) depends on the card colour
-  cardTypes: {
-    purple: { weight: 70, odds: [10, 30, 60] },
-    blue:   { weight: 22, odds: [20, 40, 40] },
-    gold:   { weight: 8,  odds: [45, 35, 20] },
+  // Card rarity: drop chance (%) and reward multiplier
+  rarities: {
+    rare:      { label: 'Rare',      chance: 50, multiplier: 1 },
+    epic:      { label: 'Epic',      chance: 35, multiplier: 2 },
+    legendary: { label: 'Legendary', chance: 12, multiplier: 5 },
+    immortal:  { label: 'Immortal',  chance: 3,  multiplier: 20 },
   },
 };
 
 // ---------- State ----------
 const $ = id => document.getElementById(id);
+const SAVE_KEY = 'lucky-scratch-v2';
 const store = {
-  get() { try { return JSON.parse(localStorage.getItem('lucky-scratch')) } catch { return null } },
-  set(v) { try { localStorage.setItem('lucky-scratch', JSON.stringify(v)) } catch {} },
+  get() { try { return JSON.parse(localStorage.getItem(SAVE_KEY)) } catch { return null } },
+  set(v) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(v)) } catch {} },
 };
-let save = store.get() || { bag: 0, cards: [], played: 0, wins: [0, 0, 0], mode: 'scratch', fresh: true };
-if (save.fresh) { save.cards = Array.from({ length: CONFIG.startCards }, randomCardType); save.fresh = false; }
+const newSave = () => ({ bag: 0, cards: Array.from({ length: CONFIG.startCards }, randomRarity), played: 0, wins: [0, 0, 0] });
+let save = store.get() || newSave();
 
-let round = null; // { type, winner, sequence, step, counts, done }
-let activeTile = null;
+let round = null; // { rarity, winner, sequence, step, counts, done }
 
 // ---------- Helpers ----------
 function pickWeighted(weights) {
@@ -234,10 +254,11 @@ function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 }
-function randomCardType() {
-  const types = Object.keys(CONFIG.cardTypes);
-  return types[pickWeighted(types.map(t => CONFIG.cardTypes[t].weight))];
+function randomRarity() {
+  const keys = Object.keys(CONFIG.rarities);
+  return keys[pickWeighted(keys.map(k => CONFIG.rarities[k].chance))];
 }
+const rewardFor = (prize, rarity) => CONFIG.prizes[prize].reward * (rarity ? CONFIG.rarities[rarity].multiplier : 1);
 
 // The result is decided when the card starts (like the real game's "100% win rate").
 // Whichever tile you open next shows the next symbol in this sequence,
@@ -270,30 +291,31 @@ const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms) } catch {}
 
 // ---------- Rendering ----------
 function renderPrizes() {
+  const rarity = round && round.rarity;
   $('prizes').innerHTML = CONFIG.prizes.map((p, i) => `
     <div class="prize" data-i="${i}">
       <div class="label">${p.name}</div>
       <div class="slots">${`<span>${p.icon}</span>`.repeat(3)}</div>
-      <div class="reward">📜<b>${p.reward}</b></div>
+      <div class="reward">📜<b>${rewardFor(i, rarity)}</b></div>
     </div>`).join('');
+  updatePrizeSlots();
 }
 function updatePrizeSlots() {
   document.querySelectorAll('.prize').forEach((el, i) => {
     const n = round ? round.counts[i] : 0;
     el.querySelectorAll('.slots span').forEach((s, k) => s.classList.toggle('on', k < n));
-    el.classList.toggle('hot', n === 2 && !round.done);
+    el.classList.toggle('hot', !!round && n === 2 && !round.done);
     el.classList.toggle('won', !!round && round.done && round.winner === i);
   });
 }
 function renderTray() {
   $('cards').innerHTML = save.cards.length
-    ? save.cards.map(t => `<div class="card ${t}">✦</div>`).join('')
+    ? save.cards.map(r => `<div class="card ${r}" title="${CONFIG.rarities[r].label}">✦</div>`).join('')
     : '<span class="none">No cards</span>';
 }
 function renderStats() {
   $('bagCount').textContent = save.bag;
   $('stats').textContent = `Played ${save.played} · 👑${save.wins[0]} 💧${save.wins[1]} 🧤${save.wins[2]}`;
-  document.querySelectorAll('#mode button').forEach(b => b.classList.toggle('on', b.dataset.mode === save.mode));
 }
 
 function drawCover(canvas) {
@@ -302,7 +324,6 @@ function drawCover(canvas) {
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d');
   const r = size * 0.46, c = size / 2;
-  ctx.globalCompositeOperation = 'source-over';
   ctx.clearRect(0, 0, size, size);
   const grad = ctx.createRadialGradient(c * 0.8, c * 0.7, r * 0.1, c, c, r);
   grad.addColorStop(0, '#c9c9cf'); grad.addColorStop(1, '#a9a9b2');
@@ -315,31 +336,24 @@ function drawCover(canvas) {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('Lucky', 0, size * 0.04);
   ctx.restore();
-  canvas._total = countOpaque(canvas);
-}
-function countOpaque(canvas) {
-  const d = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
-  let n = 0;
-  for (let i = 3; i < d.length; i += 4 * 6) if (d[i] > 0) n++;
-  return n;
 }
 
 function dealCard() {
   const board = $('board');
   board.innerHTML = '';
-  activeTile = null;
   if (!save.cards.length) {
     round = null;
     $('ticket').classList.add('no-card');
     $('ticket').dataset.type = '';
-    updatePrizeSlots();
+    renderPrizes();
     return;
   }
   $('ticket').classList.remove('no-card');
-  const type = save.cards.shift();
-  const winner = pickWeighted(CONFIG.cardTypes[type].odds);
-  round = { type, winner, sequence: buildSequence(winner), step: 0, counts: [0, 0, 0], done: false };
-  $('ticket').dataset.type = type;
+  const rarity = save.cards.shift();
+  const winner = pickWeighted(CONFIG.prizeOdds);
+  round = { rarity, winner, sequence: buildSequence(winner), step: 0, counts: [0, 0, 0], done: false };
+  $('ticket').dataset.type = rarity;
+  $('rarity').textContent = CONFIG.rarities[rarity].label;
   for (let i = 0; i < CONFIG.tiles; i++) {
     const t = document.createElement('div');
     t.className = 'tile';
@@ -347,25 +361,18 @@ function dealCard() {
     board.appendChild(t);
   }
   requestAnimationFrame(() => board.querySelectorAll('canvas').forEach(drawCover));
+  if (rarity === 'legendary' || rarity === 'immortal') {
+    [523, 659, 784].forEach((f, i) => tone(f, 0.15, 'triangle', i * 0.07, 0.12)); buzz(40);
+  }
   store.set(save);
-  renderTray(); updatePrizeSlots();
-}
-
-// Assign the next symbol when a tile is first touched, so the face is visible while scratching.
-function activate(tile) {
-  const sym = round.sequence[round.step++];
-  tile.dataset.sym = sym;
-  tile.querySelector('.face').textContent = CONFIG.prizes[sym].icon;
-  tile.classList.add('active');
-  activeTile = tile;
-  tone(520, 0.05, 'triangle');
+  renderTray(); renderPrizes();
 }
 
 function reveal(tile) {
-  tile.classList.remove('active');
+  const sym = round.sequence[round.step++];
+  tile.dataset.sym = sym;
+  tile.querySelector('.face').textContent = CONFIG.prizes[sym].icon;
   tile.classList.add('revealed');
-  activeTile = null;
-  const sym = +tile.dataset.sym;
   round.counts[sym]++;
   const n = round.counts[sym];
   tone(500 + n * 180, 0.12, 'triangle'); buzz(15);
@@ -376,6 +383,7 @@ function reveal(tile) {
 function win(sym) {
   round.done = true;
   const p = CONFIG.prizes[sym];
+  const reward = rewardFor(sym, round.rarity);
   document.querySelectorAll('.tile').forEach(t => {
     t.classList.remove('pair');
     if (+t.dataset.sym === sym && t.classList.contains('revealed')) t.classList.add('win');
@@ -383,93 +391,43 @@ function win(sym) {
   });
   updatePrizeSlots();
   [660, 830, 990, 1320].forEach((f, i) => tone(f, 0.18, 'triangle', i * 0.09, 0.18)); buzz([30, 40, 60]);
-  save.bag += p.reward; save.played++; save.wins[sym]++;
+  save.bag += reward; save.played++; save.wins[sym]++;
   store.set(save);
   setTimeout(() => {
     renderStats();
     $('bag').classList.add('bump'); setTimeout(() => $('bag').classList.remove('bump'), 250);
+    $('popRarity').textContent = `${CONFIG.rarities[round.rarity].label} card`;
     $('popTitle').textContent = p.name + '!';
     $('popIcon').textContent = p.icon.repeat(3);
-    $('popReward').textContent = `📜 × ${p.reward}`;
+    $('popReward').textContent = `📜 × ${reward}`;
     $('popBtn').textContent = save.cards.length ? 'Next card' : 'OK';
     $('overlay').classList.add('show');
   }, 900);
 }
 
 // ---------- Input ----------
-const board = $('board');
-let last = null, moves = 0, downAt = null;
-
-function tileAt(x, y) {
-  const el = document.elementFromPoint(x, y);
-  return el && el.closest('.tile');
-}
-function scratch(tile, x, y) {
-  const canvas = tile.querySelector('canvas');
-  const rect = canvas.getBoundingClientRect();
-  const k = canvas.width / rect.width;
-  const px = (x - rect.left) * k, py = (y - rect.top) * k;
-  const ctx = canvas.getContext('2d');
-  ctx.globalCompositeOperation = 'destination-out';
-  ctx.lineCap = 'round'; ctx.lineWidth = canvas.width * CONFIG.brushSize * 2;
-  ctx.beginPath();
-  if (last && last.tile === tile) ctx.moveTo(last.x, last.y); else ctx.moveTo(px, py);
-  ctx.lineTo(px + 0.1, py + 0.1); ctx.stroke();
-  last = { tile, x: px, y: py };
-  if (++moves % 5 === 0) {
-    if (Math.random() < 0.5) tone(180 + Math.random() * 120, 0.03, 'sawtooth', 0, 0.03);
-    if (1 - countOpaque(canvas) / canvas._total >= CONFIG.scratchClearRatio) reveal(tile);
-  }
-}
-function handle(e) {
+$('board').addEventListener('click', e => {
   if (!round || round.done) return;
-  const tile = tileAt(e.clientX, e.clientY);
+  const tile = e.target.closest('.tile');
   if (!tile || tile.classList.contains('revealed')) return;
-  // One tile at a time: finish the current tile before starting another.
-  if (activeTile && tile !== activeTile) return;
-  if (!activeTile) activate(tile);
-  if (save.mode === 'scratch') scratch(tile, e.clientX, e.clientY);
-}
-board.addEventListener('pointerdown', e => {
-  board.setPointerCapture(e.pointerId);
-  downAt = { x: e.clientX, y: e.clientY };
-  last = null;
-  if (save.mode === 'tap') {
-    if (!round || round.done) return;
-    const tile = tileAt(e.clientX, e.clientY);
-    if (!tile || tile.classList.contains('revealed')) return;
-    if (!activeTile) activate(tile);
-    if (tile === activeTile) reveal(tile);
-    return;
-  }
-  handle(e);
+  reveal(tile);
 });
-board.addEventListener('pointermove', e => { if (downAt && save.mode === 'scratch') handle(e); });
-const up = () => { downAt = null; last = null; };
-board.addEventListener('pointerup', up);
-board.addEventListener('pointercancel', up);
-
 $('popBtn').onclick = () => { $('overlay').classList.remove('show'); dealCard(); };
 $('getCards').onclick = () => {
-  for (let i = 0; i < CONFIG.cardsPerRefill; i++) save.cards.push(randomCardType());
+  for (let i = 0; i < CONFIG.cardsPerRefill; i++) save.cards.push(randomRarity());
   store.set(save); renderTray(); tone(700, 0.1, 'triangle');
   if (!round) dealCard();
 };
-$('mode').onclick = e => {
-  const m = e.target.dataset.mode; if (!m) return;
-  save.mode = m; store.set(save); renderStats();
-};
 $('reset').onclick = () => {
   if (!confirm('Reset all progress?')) return;
-  save = { bag: 0, cards: Array.from({ length: CONFIG.startCards }, randomCardType), played: 0, wins: [0, 0, 0], mode: save.mode, fresh: false };
+  save = newSave();
   store.set(save); $('overlay').classList.remove('show'); renderStats(); dealCard();
 };
 window.addEventListener('resize', () => {
-  // Redraw covers on unscratched tiles if the layout size changes
-  document.querySelectorAll('.tile:not(.revealed):not(.active) canvas').forEach(drawCover);
+  document.querySelectorAll('.tile:not(.revealed) canvas').forEach(drawCover);
 });
 
-renderPrizes(); renderStats(); renderTray();
+renderStats(); renderTray(); renderPrizes();
 (document.fonts ? document.fonts.ready : Promise.resolve()).then(dealCard);
 </script>
 </body>
