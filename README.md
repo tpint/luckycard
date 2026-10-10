@@ -6,11 +6,11 @@ A scratch-card game prototype in a single HTML file. Each card is a 4×4 grid of
 
 Open `index.html` in a browser. No build step or dependencies.
 
-Progress (bag total, remaining cards, stats) is saved in the browser's `localStorage`. Use **reset progress** at the bottom of the page to start over.
+Progress (💎 total, remaining cards, the card in play with its opened tiles, upgrades, stats) is saved in the browser's `localStorage`. Use **reset progress** at the bottom of the page to start over.
 
 ## How it works
 
-- **Prizes:** 1st 👑 (3 📜), 2nd 💧 (2 📜), 3rd 🧤 (1 📜). Odds per card: 10% / 30% / 60%.
+- **Prizes:** 1st 🍰 (3 💎), 2nd 🍩 (2 💎), 3rd 🍬 (1 💎). Odds per card: 10% / 30% / 60%.
 - **Card rarity** multiplies the reward:
 
   | Rarity    | Drop rate | Multiplier |
@@ -22,16 +22,17 @@ Progress (bag total, remaining cards, stats) is saved in the browser's `localSto
 
 - You start with 3 cards; **Get Cards** adds 3 more (free in the prototype).
 - The tray shows every card you hold. The card being played right now is first, with a gold glow and a **NOW** tag.
+- On a win, 💎 burst out of the winning tiles and fly into the counter — more gems for higher rarities (`gems` in `CONFIG.rarities`).
 
 ## Upgrades
 
-Tap **⬆ Upgrades** (top right) to spend 📜. Each level costs more than the last.
+Tap **⬆ Upgrades** (top right) to spend 💎. Each level costs more than the last.
 
 | Upgrade          | Effect per level                                   | Max | At max level                   |
 |------------------|----------------------------------------------------|-----|--------------------------------|
 | 🍀 Lucky Draw    | Shifts card rarity odds away from Rare             | 10  | Rare 25 / Epic 31 / Legendary 25 / Immortal 19% |
-| 👑 Crown Chance  | Raises 1st and 2nd prize odds, lowers 3rd          | 5   | 👑 25 / 💧 45 / 🧤 30%          |
-| 📜 Bigger Prizes | +1 to every prize's base reward (before rarity ×)  | 5   | 👑 8 / 💧 7 / 🧤 6              |
+| 🎯 Top Prize Chance | Raises 1st and 2nd prize odds, lowers 3rd        | 5   | 🍰 25 / 🍩 45 / 🍬 30%          |
+| 💎 Bigger Prizes | +1 to every prize's base reward (before rarity ×)  | 5   | 🍰 8 / 🍩 7 / 🍬 6              |
 
 Lucky Draw only affects newly drawn cards, not cards already in the tray. **reset progress** also resets upgrades.
 
