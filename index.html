@@ -193,7 +193,9 @@
   .fx.shard { width: 10px; height: 7px; border-radius: 2px; background: linear-gradient(135deg, #f2f2f6, #a9a9b2); }
   .fx.spark { font-size: 16px; line-height: 1; text-shadow: 0 0 6px currentColor; }
   .fx.ring { border-radius: 50%; border: 3px solid; }
-  .fx.cheer { z-index: 16; font-weight: 800; font-size: 18px; white-space: nowrap; color: #fff; -webkit-text-stroke: 1px #c2389b; text-shadow: 0 2px 0 #c2389b, 0 0 10px #ff8ad0; }
+  .fx.cheer { z-index: 16; font-weight: 800; font-size: 18px; white-space: nowrap; color: #fff;
+    /* outline from shadows: -webkit-text-stroke draws the font's inner overlaps and turned "l" into "!" */
+    text-shadow: 1px 0 #c2389b, -1px 0 #c2389b, 0 1px #c2389b, 0 -1px #c2389b, 1px 1px #c2389b, -1px 1px #c2389b, 1px -1px #c2389b, -1px -1px #c2389b, 0 3px 0 #c2389b, 0 0 10px #ff8ad0; }
   @media (prefers-reduced-motion: reduce) {
     .tile.revealed canvas { transform: none; }
   }
@@ -249,7 +251,7 @@
   </div>
 
   <div class="bottom">
-    <div class="version">v1.1 <!-- bump on every push --></div>
+    <div class="version">v1.2 <!-- bump on every push --></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
   </div>
 </div>
