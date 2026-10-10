@@ -31,7 +31,8 @@ const tileState = page => page.evaluate(() => [...document.querySelectorAll('.ti
 const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrades: {} });
 
 (async () => {
-  const browser = await chromium.launch();
+  // CHROMIUM_PATH lets the test use an already-installed Chromium (e.g. in cloud sandboxes)
+  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 
   // --- Normal motion: refresh resume, gem burst, popup, empty state, shop ---
   const page = await openGame(browser, freshSave(['immortal', 'rare']));
@@ -39,7 +40,15 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   check(await page.$('.card.current') !== null, 'current card is highlighted in the tray');
 
   const tiles = page.locator('.tile:not(.revealed)');
-  await tiles.nth(0).click(); await tiles.nth(3).click();
+  await tiles.nth(0).click();
+  await page.waitForTimeout(120);
+  const fx = await page.evaluate(() => ({ shards: document.querySelectorAll('.fx.shard').length, sparks: document.querySelectorAll('.fx.spark').length, ring: document.querySelectorAll('.fx.ring').length }));
+  check(fx.shards > 0 && fx.sparks > 0 && fx.ring === 1, `opening a tile bursts shards, sparkles and a ring (${JSON.stringify(fx)})`);
+  check(await page.$('.tile.opened') !== null, 'opened tile bounces in');
+  await shot(page, '1b-tile-open-burst');
+  await page.waitForTimeout(900);
+  check(await page.locator('.fx').count() === 0, 'open effects clean themselves up');
+  await tiles.nth(3).click();
   const before = await tileState(page);
   await page.reload(); await page.waitForTimeout(800);
   check(before === await tileState(page), 'opened tiles survive a refresh');
@@ -72,8 +81,26 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   check(page.errors.length === 0, `no page errors ${page.errors.length ? JSON.stringify(page.errors) : ''}`);
   await page.close();
 
+  // --- Opening the 2nd copy of a symbol cheers "So close!" (card set up so the first two tiles are a pair) ---
+  const seq = [0, 0, 1, 2, 2, 0];
+  const cpage = await openGame(browser, { ...freshSave([]), round: { rarity: 'rare', winner: 0, sequence: seq, step: 0, counts: [0, 0, 0], tiles: Array(16).fill(null), done: false } });
+  await cpage.locator('.tile').nth(0).click();
+  await cpage.waitForTimeout(150);
+  check(await cpage.locator('.fx.cheer').count() === 0, 'first copy of a symbol: no cheer');
+  await cpage.waitForTimeout(800);
+  await cpage.locator('.tile').nth(5).click();
+  await cpage.waitForTimeout(250);
+  check(await cpage.locator('.fx.cheer', { hasText: 'So close!' }).count() === 1, 'a pair shows the "So close!" cheer');
+  await shot(cpage, '2b-so-close');
+  check(cpage.errors.length === 0, 'pair cheer: no page errors');
+  await cpage.close();
+
   // --- Reduced motion: no flying gems, counter glows and counts up ---
   const rpage = await openGame(browser, { ...freshSave(['immortal']), bag: 100 }, { reducedMotion: 'reduce' });
+  await rpage.locator('.tile').first().click();
+  await rpage.waitForTimeout(100);
+  check(await rpage.$('.tile.glow') !== null && await rpage.locator('.fx.shard, .fx.spark, .fx.ring').count() === 0,
+    'reduced motion: opened tile glows, no flying shards or sparkles');
   await playUntilWin(rpage);
   let sawGems = false, sawShine = false;
   for (let t = 0; t < 12; t++) {

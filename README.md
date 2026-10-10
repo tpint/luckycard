@@ -22,6 +22,7 @@ Progress (💎 total, remaining cards, the card in play with its opened tiles, u
 
 - You start with 3 cards; **Get Cards** adds 3 more (free in the prototype).
 - The tray shows every card you hold. The card being played right now is first, with a gold glow and a **NOW** tag.
+- Opening a tile feels juicy: the foil cover spins off in shards, the symbol bounces in, sparkles and a ring burst out with a scratch sound and a chime. The burst grows as a symbol gets closer to a match, and the 2nd copy of a symbol (a pair) pops a pink **So close!** cheer with a double haptic tap. With reduce motion on, the tile just glows softly and the cheer fades in place.
 - On a win, 💎 burst out of the winning tiles and fly into the counter — more gems for higher rarities (`gems` in `CONFIG.rarities`). If the device has reduce motion turned on (e.g. Windows "Animation effects" off), the counter glows and counts up instead.
 
 ## Upgrades
@@ -47,5 +48,5 @@ The version shown at the bottom-left of the page is set by hand in `index.html` 
 ## Development
 
 - **Codespaces:** on GitHub, **Code → Codespaces → Create codespace on main**. The `.devcontainer` sets up Node, the Live Preview extension (open `index.html` → "Show Preview"), Claude Code, and Playwright with Chromium. Forwarded port 3000 lets you open the game on a phone.
-- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (refresh resume, gem burst, popup, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first.
+- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (tile-open burst, pair cheer, refresh resume, gem burst, popup, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
 - **Before every push:** bump the version label, update this README, run `npm test` (see `CLAUDE.md`).

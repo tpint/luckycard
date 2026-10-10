@@ -118,8 +118,18 @@
     box-shadow: inset 0 0 0 3px #d9d0ef;
   }
   .tile canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity .25s, transform .1s; }
-  .tile.revealed canvas { opacity: 0; pointer-events: none; }
+  /* the foil cover lifts off and spins away */
+  .tile.revealed canvas { opacity: 0; pointer-events: none; transform: scale(1.35) rotate(12deg); transition: opacity .3s, transform .3s ease-out; }
   .tile.revealed .face { animation: pop .3s ease-out; }
+  .tile.opened .face { animation: openpop .45s cubic-bezier(.3, 1.6, .5, 1); }
+  .tile.glow .face { animation: softglow .6s ease-out; }
+  @keyframes softglow { from { box-shadow: inset 0 0 0 3px #fff, 0 0 18px 6px #fff8c8; } }
+  @keyframes openpop {
+    0% { transform: scale(.3) rotate(-15deg); }
+    55% { transform: scale(1.22) rotate(5deg); }
+    75% { transform: scale(.94) rotate(-2deg); }
+    100% { transform: scale(1) rotate(0); }
+  }
   .tile:not(.revealed) { cursor: pointer; }
   .tile:not(.revealed):active canvas { transform: scale(.92); }
   .tile.pair .face { box-shadow: inset 0 0 0 3px #ff8ad0, 0 0 10px #ff8ad0; }
@@ -178,6 +188,16 @@
   /* gems flying to the counter on a win */
   .fly-gem { position: fixed; z-index: 20; font-size: 22px; pointer-events: none; filter: drop-shadow(0 0 6px #7fe3ff); }
 
+  /* tile-open effects: foil shards, sparkles, ripple ring and "So close!" text */
+  .fx { position: fixed; z-index: 15; pointer-events: none; left: 0; top: 0; }
+  .fx.shard { width: 10px; height: 7px; border-radius: 2px; background: linear-gradient(135deg, #f2f2f6, #a9a9b2); }
+  .fx.spark { font-size: 16px; line-height: 1; text-shadow: 0 0 6px currentColor; }
+  .fx.ring { border-radius: 50%; border: 3px solid; }
+  .fx.cheer { z-index: 16; font-weight: 800; font-size: 18px; white-space: nowrap; color: #fff; -webkit-text-stroke: 1px #c2389b; text-shadow: 0 2px 0 #c2389b, 0 0 10px #ff8ad0; }
+  @media (prefers-reduced-motion: reduce) {
+    .tile.revealed canvas { transform: none; }
+  }
+
   /* upgrade shop */
   .top-right { display: flex; align-items: center; gap: 8px; }
   .shop-btn {
@@ -229,7 +249,7 @@
   </div>
 
   <div class="bottom">
-    <div class="version">v1.0 <!-- bump on every push --></div>
+    <div class="version">v1.1 <!-- bump on every push --></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
   </div>
 </div>
@@ -347,6 +367,18 @@ function tone(freq, dur = 0.08, type = 'sine', when = 0, vol = 0.15) {
     o.type = type; o.frequency.value = freq;
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dur);
+  } catch {}
+}
+// Short filtered noise burst: the "shhk" of foil being scratched off
+function scratch(dur = 0.09, vol = 0.12) {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const len = Math.floor(audio.sampleRate * dur), buf = audio.createBuffer(1, len, audio.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = audio.createBufferSource(), f = audio.createBiquadFilter(), g = audio.createGain();
+    src.buffer = buf; f.type = 'bandpass'; f.frequency.value = 3500; f.Q.value = 0.8; g.gain.value = vol;
+    src.connect(f).connect(g).connect(audio.destination); src.start();
   } catch {}
 }
 const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms) } catch {} };
@@ -489,9 +521,71 @@ function reveal(tile) {
   round.counts[sym]++;
   store.set(save);
   const n = round.counts[sym];
-  tone(500 + n * 180, 0.12, 'triangle'); buzz(15);
+  scratch();
+  tone(500 + n * 180, 0.12, 'triangle', 0.03);
+  if (n >= 2) tone(1000 + n * 200, 0.15, 'sine', 0.11, 0.1); // extra chime for a pair
+  buzz(n === 2 ? [15, 40, 25] : 15);
+  revealFx(tile, n);
   document.querySelectorAll(`.tile.revealed[data-sym="${sym}"]`).forEach(t => t.classList.toggle('pair', n === 2));
   if (n === 3) win(sym); else updatePrizeSlots();
+}
+
+// Opening a tile: the face bounces in, foil shards and sparkles burst out and a ring ripples away.
+// The burst grows with n (copies of this symbol now open), and a pair gets a "So close!" cheer.
+function revealFx(tile, n) {
+  const reduced = reducedMotion();
+  tile.classList.add(reduced ? 'glow' : 'opened'); // left on: removing it would restart the base pop animation
+  if (!Element.prototype.animate) return;
+  const r = tile.getBoundingClientRect();
+  const x = r.left + r.width / 2, y = r.top + r.height / 2;
+  const fx = (cls, text = '') => {
+    const el = document.createElement('div');
+    el.className = 'fx ' + cls; el.textContent = text;
+    document.body.appendChild(el);
+    return el;
+  };
+  const at = (dx, dy, extra = '') => `translate(${x + dx}px, ${y + dy}px) translate(-50%, -50%) ${extra}`;
+  const play = (el, frames, opts) => { el.animate(frames, { fill: 'forwards', ...opts }).onfinish = () => el.remove(); };
+  const cheer = n === 2 ? 'So close!' : n === 3 ? 'Match!' : '';
+  if (reduced) {
+    // Gentler version: no flying bits, just the cheer fading in and out in place
+    if (cheer) play(fx('cheer', cheer), [{ transform: at(0, -r.height * 0.6), opacity: 0 }, { transform: at(0, -r.height * 0.6), opacity: 1, offset: .2 }, { transform: at(0, -r.height * 0.6), opacity: 0 }], { duration: 900 });
+    return;
+  }
+  const color = ['#fff4b0', '#ff8ad0', '#ffd84a'][n - 1];
+
+  const ring = fx('ring');
+  ring.style.width = ring.style.height = r.width * 0.8 + 'px';
+  ring.style.borderColor = color;
+  play(ring, [{ transform: at(0, 0, 'scale(.5)'), opacity: 1 }, { transform: at(0, 0, `scale(${1.5 + n * 0.25})`), opacity: 0 }], { duration: 450, easing: 'ease-out' });
+
+  for (let i = 0; i < 6; i++) {
+    const ang = (i / 6) * Math.PI * 2 + Math.random() * 0.6, dist = r.width * (0.5 + Math.random() * 0.4);
+    const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+    play(fx('shard'), [
+      { transform: at(0, 0, 'rotate(0deg)'), opacity: 1 },
+      { transform: at(dx, dy + r.height * 0.5, `rotate(${(Math.random() - .5) * 720}deg) scale(.6)`), opacity: 0 },
+    ], { duration: 500 + Math.random() * 200, easing: 'cubic-bezier(.2, .6, .4, 1)' });
+  }
+
+  const sparks = 4 + n * 3;
+  for (let i = 0; i < sparks; i++) {
+    const ang = Math.random() * Math.PI * 2, dist = r.width * (0.4 + Math.random() * (0.3 + n * 0.2));
+    const s = fx('spark', '✦');
+    s.style.color = color; s.style.fontSize = 10 + Math.random() * (6 + n * 3) + 'px';
+    play(s, [
+      { transform: at(0, 0, 'scale(.2)'), opacity: 1 },
+      { transform: at(Math.cos(ang) * dist, Math.sin(ang) * dist, 'scale(1.2)'), opacity: 1, offset: .6 },
+      { transform: at(Math.cos(ang) * dist * 1.15, Math.sin(ang) * dist * 1.15, 'scale(0)'), opacity: 0 },
+    ], { duration: 550 + Math.random() * 200, delay: Math.random() * 60, easing: 'ease-out' });
+  }
+
+  if (cheer) play(fx('cheer', cheer), [
+    { transform: at(0, -r.height * 0.3, 'scale(.4)'), opacity: 0 },
+    { transform: at(0, -r.height * 0.7, 'scale(1.15)'), opacity: 1, offset: .25 },
+    { transform: at(0, -r.height * 0.8, 'scale(1)'), opacity: 1, offset: .7 },
+    { transform: at(0, -r.height * 1.1, 'scale(1)'), opacity: 0 },
+  ], { duration: 950, easing: 'ease-out' });
 }
 
 function win(sym) {

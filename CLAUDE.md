@@ -8,7 +8,7 @@ Single-file scratch-card game prototype: everything (HTML, CSS, JS) is in `index
 
 ## Testing
 
-`npm test` runs `tests/check.js`: plays the game in headless Chromium at phone size, checks the main flows (refresh resume, gem burst, popup, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Run it after gameplay/UI changes and look at the screenshots. Extend it when adding features.
+`npm test` runs `tests/check.js`: plays the game in headless Chromium at phone size, checks the main flows (tile-open burst, pair cheer, refresh resume, gem burst, popup, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Run it after gameplay/UI changes and look at the screenshots. Extend it when adding features.
 
 ## Every push
 
