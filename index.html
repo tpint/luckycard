@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#b98cf0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Lucky Scratch</title>
+<title>LuckyCard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -172,7 +172,7 @@
 <body>
 <div class="app">
   <div class="top">
-    <div class="title"><span class="info">!</span>Lucky Scratch</div>
+    <div class="title"><span class="info">!</span>LuckyCard</div>
     <div class="bag" id="bag">📜 <span id="bagCount">0</span></div>
   </div>
 
@@ -234,7 +234,7 @@ const CONFIG = {
 
 // ---------- State ----------
 const $ = id => document.getElementById(id);
-const SAVE_KEY = 'lucky-scratch-v2';
+const SAVE_KEY = 'luckycard';
 const store = {
   get() { try { return JSON.parse(localStorage.getItem(SAVE_KEY)) } catch { return null } },
   set(v) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(v)) } catch {} },
