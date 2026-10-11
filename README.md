@@ -2,7 +2,7 @@
 
 A scratch-card game prototype: one HTML file plus its art in `assets/`. Each card is a 4×4 grid of tiles; tap tiles to open them, in any order, and find **3 matching patterns** to win that prize. Every card wins (100% win rate) — the prize tier and card rarity decide how much.
 
-Like a real scratch card, every tile gets its symbol when the card starts: 3 of the winning prize, 0–2 of each other prize (so only the winner can match, and pairs of the others make near-misses), and "no prize" blanks (a faint ✦) on the rest. Tap **⚡ Open all** to scratch the remaining tiles in one go.
+Like a real scratch card, every tile gets its prize when the card starts, and every tile is a prize: each of 🍰 🍩 🍬 at least 3 times, about 4 🍰, 5 🍩 and 7 🍬 on a typical card. **You win whichever prize you match 3 of first**, so the order you tap in decides it, and a card always ends within 7 taps.
 
 ## Play
 
@@ -12,7 +12,7 @@ Progress (💎 total, remaining cards, Get Cards left, the card in play with its
 
 ## How it works
 
-- **Prizes:** 1st 🍰 (3 💎), 2nd 🍩 (2 💎), 3rd 🍬 (1 💎). Odds per card: 10% / 30% / 60%.
+- **Prizes:** 1st 🍰 (3 💎), 2nd 🍩 (2 💎), 3rd 🍬 (1 💎). Chance of matching each first: about 11% / 28% / 60%. Each prize gets 3 tiles; the other 7 are split by `CONFIG.prizeMix` (10 / 30 / 60), and the shop shows the exact odds.
 - **Card rarity** multiplies the reward:
 
   | Rarity    | Drop rate | Multiplier |
@@ -22,7 +22,7 @@ Progress (💎 total, remaining cards, Get Cards left, the card in play with its
   | Legendary | 20%       | ×5         |
   | Immortal  | 10%       | ×20        |
 
-- You start with 3 cards; **Get Cards** adds 3 more (free in the prototype) and can be used **2 times per game** (the button shows how many are left).
+- You start with 3 cards; **Get Cards** adds 3 more (free in the prototype) and can be used **2 times per game** (the button shows how many are left). When you're out of cards, tapping the empty card does the same as Get Cards.
 - **Game over:** when you're out of cards and Get Cards is used up, the game ends. Enter your name to put the 💎 you earned this game on the 🏆 leaderboard (spending 💎 on upgrades doesn't lower your score). **New game** keeps your 💎 and upgrades and resets cards, Get Cards and the score.
 - **💎 counters:** the header shows all your 💎 (kept between games, spent on upgrades); **This game** next to the slogan shows what you've earned in the current game, which is your leaderboard score.
 - **🏆 Leaderboard** (button next to Get Cards): top 10 scores, with your latest score highlighted and its rank shown even if it's outside the top 10.
@@ -43,7 +43,7 @@ Tap **⬆ Upgrades** (top right) to spend 💎. Each level costs more than the l
 | Upgrade          | Effect per level                                   | Max | At max level                   |
 |------------------|----------------------------------------------------|-----|--------------------------------|
 | 🍀 Lucky Draw    | Shifts card rarity odds away from Rare             | 10  | Rare 25 / Epic 31 / Legendary 25 / Immortal 19% |
-| 🎯 Top Prize Chance | Raises 1st and 2nd prize odds, lowers 3rd        | 5   | 🍰 25 / 🍩 45 / 🍬 30%          |
+| 🎯 Top Prize Chance | Puts more 🍰 and 🍩 and fewer 🍬 on new cards, so you're more likely to match them first | 5   | 🍰 25 / 🍩 45 / 🍬 30%          |
 | 💎 Bigger Prizes | +1 to every prize's base reward (before rarity ×)  | 5   | 🍰 8 / 🍩 7 / 🍬 6              |
 
 Lucky Draw only affects newly drawn cards, not cards already in the tray. 💎 and upgrades carry over to a **New game**; **reset progress** resets both (the leaderboard is kept).
@@ -93,7 +93,7 @@ All graphics are original SVG files in `assets/`, drawn for LuckyCard:
 
 ## Tuning
 
-All balance values live in the `CONFIG` object at the top of the `<script>` in `index.html`: art file paths, grid size, starting cards, refill size, prize odds and rewards, rarity drop rates and multipliers, upgrade costs and effects (`CONFIG.upgrades`), how many times Get Cards can be used (`maxRefills`), the leaderboard (`leaderboard`), how often near-misses appear (`loserCountWeights`), and the pacing (`scratchMs`, `revealAllStagger`, `nextCardDelay`).
+All balance values live in the `CONFIG` object at the top of the `<script>` in `index.html`: art file paths, grid size, starting cards, refill size, the prize mix on a card (`prizeMix`) and rewards, rarity drop rates and multipliers, upgrade costs and effects (`CONFIG.upgrades`), how many times Get Cards can be used (`maxRefills`), the leaderboard (`leaderboard`), and the pacing (`scratchMs`, `revealAllStagger`, `nextCardDelay`).
 
 ## Versioning
 
@@ -102,5 +102,5 @@ The version shown at the bottom-left of the page is set by hand in `index.html` 
 ## Development
 
 - **Codespaces:** on GitHub, **Code → Codespaces → Create codespace on main**. The `.devcontainer` sets up Node, the Live Preview extension (open `index.html` → "Show Preview"), Claude Code, and Playwright with Chromium. Forwarded port 3000 lets you open the game on a phone.
-- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (art loads, board makeup, scratch-off, tile-open burst, pair cheer, Open all, reveal-all, auto next card, old-save conversion, Get Cards limit, game over, leaderboard online and on-device against a fake Supabase (tests never send scores to the real leaderboard), refresh resume, gem burst, win ribbon, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
+- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (art loads, board makeup, first match wins, exact shop odds, scratch-off, tile-open burst, pair cheer, reveal-all, auto next card, old-save conversion, Get Cards limit, game over, leaderboard online and on-device against a fake Supabase (tests never send scores to the real leaderboard), refresh resume, gem burst, win ribbon, empty state (tap to get cards), shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
 - **Before every push:** bump the version label, update this README, run `npm test` (see `CLAUDE.md`).

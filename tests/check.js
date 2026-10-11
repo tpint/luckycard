@@ -123,6 +123,9 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   const height = (await page.locator('#ticket').boundingBox()).height;
   check(height > 250, `empty ticket keeps its size (${Math.round(height)}px)`);
   await shot(page, '5-empty');
+  await page.click('#ticket'); await page.waitForTimeout(400);
+  check(await page.textContent('#refillsLeft') === '1 left' && !!(await page.$('#ticket:not(.no-card) .tile canvas')) && await page.locator('.card').count() === 3,
+    'with no cards, tapping the card area works as Get Cards');
 
   await page.click('#shopBtn'); await page.waitForTimeout(300);
   check(await page.locator('.upgrade').count() === 3, 'shop shows 3 upgrades');
@@ -130,16 +133,20 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   check(page.errors.length === 0, `no page errors ${page.errors.length ? JSON.stringify(page.errors) : ''}`);
   await page.close();
 
-  // --- Real board: every tile has its symbol from the start; blanks, "So close!", Open all ---
-  const b = Array(16).fill(-1); b[0] = 0; b[5] = 0; b[9] = 0; b[3] = 1; b[7] = 2; b[8] = 2;
-  const cpage = await openGame(browser, { ...freshSave([]), round: { rarity: 'rare', winner: 0, board: b, opened: Array(16).fill(false), counts: [0, 0, 0], done: false } });
-  const boards = await cpage.evaluate(() => Array.from({ length: 300 }, (_, k) => ({ w: k % 3, b: buildBoard(k % 3) })));
+  // --- Real board: every tile is a prize from the start; first prize matched wins; "So close!" ---
+  // Tap order below: 15 (donut), 0, 5 (cake pair), 9 (3rd cake: wins, though the card also has 6 candy)
+  const b = [0, 1, 2, 2, 1, 0, 2, 1, 2, 0, 1, 2, 2, 1, 2, 1];
+  const cpage = await openGame(browser, { ...freshSave([]), round: { rarity: 'rare', board: b, opened: Array(16).fill(false), counts: [0, 0, 0], done: false } });
+  const boards = await cpage.evaluate(() => Array.from({ length: 300 }, buildBoard));
   const count = (b, s) => b.filter(x => x === s).length;
-  check(boards.every(({ w, b }) => b.length === 16 && [0, 1, 2].every(s => s === w ? count(b, s) === 3 : count(b, s) <= 2)),
-    'every new board: 16 tiles, exactly 3 of the winner, at most 2 of each other prize, the rest blank');
+  check(boards.every(b => b.length === 16 && b.every(s => s === 0 || s === 1 || s === 2) && [0, 1, 2].every(s => count(b, s) >= 3)),
+    'every new board: all 16 tiles are prizes, at least 3 of each');
+  const avg = [0, 1, 2].map(s => boards.reduce((a, b) => a + count(b, s), 0) / boards.length);
+  check(avg[0] < avg[1] && avg[1] < avg[2] && avg[0] > 3 && avg[2] < 9, `typical mix is about 4 cake / 5 donut / 7 candy (${avg.map(a => a.toFixed(1)).join(' / ')})`);
+  const odds = await cpage.evaluate(() => [matchOdds([10, 30, 60]), matchOdds([25, 45, 30])].map(o => o.map(x => Math.round(x * 1000) / 10)));
+  check(odds[0].join() === '11.4,28.5,60' && Math.abs(odds[1].reduce((a, b) => a + b) - 100) < 0.2, `shop odds are exact first-match chances (${odds[0].join(' / ')}%)`);
   await cpage.locator('.tile').nth(15).click();
-  await cpage.waitForTimeout(150);
-  check(await cpage.$('.tile:nth-child(16) .face .blank') !== null && await cpage.locator('.fx.cheer').count() === 0, 'a "no prize" tile shows a blank');
+  await cpage.waitForTimeout(450);
   await cpage.locator('.tile').nth(0).click();
   await cpage.waitForTimeout(450);
   check(await cpage.locator('.fx.cheer').count() === 0, 'first copy of a symbol: no cheer');
@@ -149,12 +156,13 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   check(await cpage.locator('.fx.cheer', { hasText: 'So close!' }).count() === 1, 'a pair shows the "So close!" cheer (tiles open in any order)');
   await shot(cpage, '2b-so-close');
   await cpage.waitForTimeout(800);
-  await cpage.click('#openAll');
+  await cpage.locator('.tile').nth(9).click();
   await cpage.waitForSelector('.tile.win', { timeout: 5000 });
   const won = await cpage.evaluate(() => [...document.querySelectorAll('.tile.win')].map(t => [...t.parentNode.children].indexOf(t)).join());
-  check(won === '0,5,9', `Open all scratches the card until the prize is found (wins on tiles ${won})`);
+  check(won === '0,5,9' && (await cpage.evaluate(() => JSON.parse(localStorage.getItem('luckycard')).wins.join())) === '1,0,0',
+    `the first prize matched is the one you win (tiles ${won})`);
   await cpage.waitForTimeout(1200);
-  check(await cpage.locator('.tile.revealed').count() === 16, 'Open all: the rest of the card reveals itself');
+  check(await cpage.locator('.tile.revealed').count() === 16 && !(await cpage.$('#openAll')), 'the rest of the card reveals itself; no Open all button');
   await shot(cpage, '2c-reveal-all');
   check(cpage.errors.length === 0, 'real board: no page errors');
   await cpage.close();
@@ -163,10 +171,19 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   const old = { rarity: 'epic', winner: 1, sequence: [2, 1, 1, 0, 1], step: 2, counts: [0, 2, 1], tiles: [2, 1, ...Array(14).fill(null)], done: false };
   const mpage = await openGame(browser, { ...freshSave([]), round: old });
   const m = await mpage.evaluate(() => JSON.parse(localStorage.getItem('luckycard')).round);
-  check(m.board.length === 16 && m.board[0] === 2 && m.board[1] === 1 && m.board.filter(x => x === 1).length === 3 && m.opened.filter(Boolean).length === 2
-    && await mpage.locator('.tile.revealed').count() === 2, 'old in-progress card is converted to a full board');
+  check(m.board.length === 16 && m.board.every(s => s >= 0 && s <= 2) && m.board[0] === 2 && m.board[1] === 1 && m.opened.filter(Boolean).length === 2 && !('winner' in m)
+    && await mpage.locator('.tile.revealed').count() === 2, 'old in-progress card is converted to a full prize board, opened tiles kept');
   await playUntilWin(mpage);
-  check(+(await mpage.evaluate(() => JSON.parse(localStorage.getItem('luckycard')).wins[1])) === 1 && mpage.errors.length === 0, 'old card: still wins its prize');
+  check((await mpage.evaluate(() => JSON.parse(localStorage.getItem('luckycard')).played)) === 1 && mpage.errors.length === 0, 'old card: still plays to a win');
+
+  // --- A card saved with empty tiles (v1.9-v2.0): empty tiles get prizes and are covered again ---
+  const e = Array(16).fill(-1); e[0] = 0; e[1] = 0; e[2] = 1;
+  const epage = await openGame(browser, { ...freshSave([]), round: { rarity: 'rare', winner: 0, board: e, opened: [true, true, true, true, ...Array(12).fill(false)], counts: [2, 1, 0], done: false } });
+  const er = await epage.evaluate(() => JSON.parse(localStorage.getItem('luckycard')).round);
+  check(er.board.every(s => s >= 0 && s <= 2) && er.opened.join() === [true, true, true, ...Array(13).fill(false)].join() && await epage.locator('.tile.revealed').count() === 3,
+    'empty tiles from an older save get prizes; an opened empty tile is covered again');
+  check(epage.errors.length === 0, 'empty-tile save: no page errors');
+  await epage.close();
   await mpage.close();
 
   // --- Get Cards limit, game over, leaderboard (keeps upgrades on New game) ---
