@@ -48,10 +48,15 @@
   .panel {
     background: var(--purple);
     border-radius: 28px 28px 22px 22px;
-    padding: 10px 10px 14px;
+    padding: 10px 10px 30px;
     box-shadow: inset 0 3px 0 rgba(255,255,255,.35), 0 6px 0 var(--purple-dark);
   }
-  .rate { text-align: center; color: #fff; font-weight: 700; font-size: 18px; margin: 2px 0 8px; opacity: .95; }
+  .rate { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #fff; font-weight: 700; font-size: 17px; margin: 2px 2px 8px 6px; }
+  .rate .slogan { opacity: .95; white-space: nowrap; }
+  /* 💎 earned this game (the leaderboard score), next to the all-time 💎 in the header */
+  .run { background: var(--purple-dark); border-radius: 999px; padding: 1px 10px; font-size: 14px; white-space: nowrap; transition: transform .2s; }
+  .run b { font-size: 16px; }
+  .run.bump { transform: scale(1.15); }
   .prizes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .prize {
     position: relative; border-radius: 10px; padding: 4px 34px 6px 6px; min-height: 58px;
@@ -120,7 +125,10 @@
   .tile canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity .25s, transform .1s; }
   /* the foil cover lifts off and spins away */
   .tile.revealed canvas { opacity: 0; pointer-events: none; transform: scale(1.35) rotate(12deg); transition: opacity .3s, transform .3s ease-out; }
+  /* while the foil is being scratched off, the cover stays put (the strokes erase it on the canvas) */
+  .tile.scratching canvas { opacity: 1; transform: none; transition: none; }
   .tile.revealed .face { animation: pop .3s ease-out; }
+  .tile.scratching .face { animation: none; } /* the symbol sits still under the foil; it pops once the scratch is done */
   .tile.opened .face { animation: openpop .45s cubic-bezier(.3, 1.6, .5, 1); }
   .tile.glow .face { animation: softglow .6s ease-out; }
   @keyframes softglow { from { box-shadow: inset 0 0 0 3px #fff, 0 0 18px 6px #fff8c8; } }
@@ -135,6 +143,34 @@
   .tile.pair .face { box-shadow: inset 0 0 0 3px #ff8ad0, 0 0 10px #ff8ad0; }
   .tile.win .face { box-shadow: inset 0 0 0 4px var(--gold), 0 0 16px 4px var(--gold); animation: winpulse .6s ease-in-out infinite alternate; }
   .tile.dim { opacity: .45; }
+  /* "no prize" tile */
+  .tile .face .blank { color: #d3cae6; font-size: 60%; }
+  /* tiles opened by the reveal-all after a win */
+  .tile.rest .face { animation: pop .25s ease-out; }
+
+  /* prize ribbon on the card's bottom edge after a win, so the whole revealed card stays visible
+     (no tap needed: the next card deals itself; tapping the card skips ahead) */
+  .banner {
+    position: absolute; left: 50%; bottom: -24px; z-index: 3; display: none; pointer-events: none;
+    transform: translateX(-50%); width: max-content; max-width: 96%; white-space: nowrap;
+    align-items: center; gap: 8px; background: #fff; border-radius: 999px; padding: 3px 16px 3px 12px;
+    box-shadow: 0 4px 0 var(--purple-dark), 0 0 0 3px var(--gold), 0 0 24px 6px rgba(255,216,74,.85);
+  }
+  .banner.show { display: flex; animation: bannerin .35s cubic-bezier(.3, 1.6, .5, 1); }
+  @keyframes bannerin { from { transform: translateX(-50%) scale(.4); opacity: 0; } }
+  .banner .b-icons { font-size: 22px; line-height: 1; }
+  .banner .b-title { font-size: 20px; font-weight: 800; color: var(--purple-deep); }
+  .banner .b-gems { font-size: 20px; font-weight: 800; color: #1d7fc4; text-shadow: 0 0 10px rgba(127,227,255,.9); }
+
+  /* scratches every remaining tile in one tap */
+  .open-all {
+    position: absolute; left: 50%; bottom: -19px; z-index: 2; transform: translateX(-50%);
+    border: 2px solid #fff; font: inherit; font-weight: 800; font-size: 14px; color: var(--ink); white-space: nowrap;
+    background: var(--gold); border-radius: 999px; padding: 3px 14px; box-shadow: 0 3px 0 #c9a21c; cursor: pointer;
+  }
+  .open-all:active { transform: translateX(-50%) translateY(2px); box-shadow: 0 1px 0 #c9a21c; }
+  .open-all[hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) { .banner.show { animation: fade .3s; } }
   @keyframes pop { 0% { transform: scale(.6); } 70% { transform: scale(1.12); } 100% { transform: scale(1); } }
   @keyframes winpulse { from { transform: scale(1); } to { transform: scale(1.1); } }
 
@@ -181,11 +217,9 @@
     box-shadow: 0 8px 0 var(--purple-dark); animation: pop .35s ease-out;
   }
   .popup h2 { margin: 0; font-size: 30px; color: var(--purple-deep); }
-  .popup .big { font-size: 56px; line-height: 1.2; }
   .popup p { margin: 4px 0 16px; font-size: 20px; font-weight: 700; }
   .popup button { border: none; font: inherit; font-weight: 800; font-size: 18px; color: #fff; background: var(--purple-dark); border-radius: 999px; padding: 10px 28px; box-shadow: 0 4px 0 var(--purple-deep); cursor: pointer; }
   @keyframes fade { from { opacity: 0; } }
-  .popup #popReward { font-size: 28px; font-weight: 800; color: #1d7fc4; text-shadow: 0 0 12px rgba(127,227,255,.9); }
 
   /* gems flying to the counter on a win */
   .fly-gem { position: fixed; z-index: 20; font-size: 22px; pointer-events: none; filter: drop-shadow(0 0 6px #7fe3ff); }
@@ -199,6 +233,7 @@
   /* tile-open effects: foil shards, sparkles, ripple ring and "So close!" text */
   .fx { position: fixed; z-index: 15; pointer-events: none; left: 0; top: 0; }
   .fx.shard { width: 10px; height: 7px; border-radius: 2px; background: linear-gradient(135deg, #f2f2f6, #a9a9b2); }
+  .fx.flake { width: 5px; height: 4px; border-radius: 1px; background: #b9b9c3; }
   .fx.spark { font-size: 16px; line-height: 1; text-shadow: 0 0 6px currentColor; }
   .fx.ring { border-radius: 50%; border: 3px solid; }
   .fx.cheer { z-index: 16; font-weight: 800; font-size: 18px; white-space: nowrap; color: #fff;
@@ -273,13 +308,15 @@
   </div>
 
   <div class="panel">
-    <div class="rate">✦ 100% Win Rate ✦</div>
+    <div class="rate"><span class="slogan">✦ 100% Win Rate ✦</span><span class="run" id="run">This game <span class="gem-slot">💎</span> <b id="runCount">0</b></span></div>
     <div class="prizes" id="prizes"></div>
     <div class="hint">Tap to open tiles. Find <em>3 matching patterns</em> to win the corresponding item.</div>
     <div class="ticket" id="ticket" data-type="">
       <div class="rarity" id="rarity"></div>
       <div class="board" id="board"></div>
       <div class="empty" id="empty">No cards left.<br>Tap “Get Cards”!</div>
+      <div class="banner" id="banner"></div>
+      <button class="open-all" id="openAll" hidden>⚡ Open all</button>
     </div>
   </div>
 
@@ -290,18 +327,8 @@
   </div>
 
   <div class="bottom">
-    <div class="version">v1.8 <!-- bump on every push --></div>
+    <div class="version">v2.0 <!-- bump on every push --></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
-  </div>
-</div>
-
-<div class="overlay" id="overlay">
-  <div class="popup">
-    <div id="popRarity" style="font-weight:800;text-transform:uppercase;font-size:14px;letter-spacing:.5px"></div>
-    <h2 id="popTitle">1st Prize!</h2>
-    <div class="big" id="popIcon">🍰</div>
-    <p id="popReward"><span class="gem-slot">💎</span> × <span id="popRewardN">3</span></p>
-    <button id="popBtn">Next card</button>
   </div>
 </div>
 
@@ -312,7 +339,7 @@
     <p class="earned">You earned <b><span class="gem-slot">💎</span> <span id="runGems">0</span></b> this game</p>
     <form id="scoreForm"><input id="nameIn" maxlength="16" placeholder="Your name" autocomplete="nickname"><button id="submitScore">Submit</button></form>
     <div id="overBoard"></div>
-    <div class="over-note">⬆ Upgrades carry over to your next game, <span class="gem-slot">💎</span> don't, so spend them first!</div>
+    <div class="over-note">Your <span class="gem-slot">💎</span> and ⬆ upgrades carry over to your next game.</div>
     <div class="over-btns"><button class="ghost" id="overShop">⬆ Upgrades</button><button id="newGame">New game</button></div>
   </div>
 </div>
@@ -344,8 +371,11 @@ const CONFIG = {
   // Online leaderboard (Supabase, see README). The publishable key is meant to be public; never put the secret key here.
   // Set url/key to '' to keep scores on this device only.
   leaderboard: { url: 'https://bftlvlwqueaqjjcgbfbb.supabase.co', key: 'sb_publishable_kn-tZx3OIFjhKg6JKOfTzw_uM6RUm51', size: 10 },
-  // How many of each losing pattern show up before the win (more 2s = more near-misses)
+  // Each card: 3 of the winning prize, 0-2 of each other prize (more 2s = more near-misses), the rest "no prize" tiles
   loserCountWeights: [20, 35, 45], // weights for 0, 1, 2 copies
+  scratchMs: 280,         // how long tapping a tile takes to scratch its foil off
+  revealAllStagger: 45,   // ms between tiles when the rest of the card opens itself after a win
+  nextCardDelay: 900,     // ms the finished card stays up (after the gems land) before the next one deals itself
   // Chance of winning each prize (1st, 2nd, 3rd) on any card
   prizeOdds: [10, 30, 60],
   prizes: [
@@ -380,15 +410,25 @@ const store = {
   get() { try { return JSON.parse(localStorage.getItem(SAVE_KEY)) } catch { return null } },
   set(v) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(v)) } catch {} },
 };
-// runGems: 💎 earned this game (the leaderboard score; spending on upgrades doesn't lower it)
+// runGems: 💎 earned this game (the leaderboard score; spending on upgrades doesn't lower it). bag (💎) carries over between games.
 const newSave = (upgrades = {}) => ({ bag: 0, cards: Array.from({ length: CONFIG.startCards }, () => randomRarity(upgrades.luck || 0)), played: 0, wins: [0, 0, 0], upgrades, refillsUsed: 0, runGems: 0, scoreSent: false });
 let save = store.get() || newSave();
 save.upgrades = save.upgrades || {}; // saves from before upgrades existed
 save.refillsUsed = save.refillsUsed || 0; save.runGems = save.runGems || 0; // saves from before the leaderboard
+const BLANK = -1; // a "no prize" tile
+if (save.round && !save.round.board) {
+  // Card saved before v1.9, when symbols were handed out in tap order: put what's left on the hidden tiles
+  const r = save.round, left = r.sequence.slice(r.step);
+  const hidden = shuffle([...left, ...Array(r.tiles.filter(t => t === null).length - left.length).fill(BLANK)]);
+  r.board = r.tiles.map(t => t === null ? hidden.pop() : t);
+  r.opened = r.tiles.map(t => t !== null);
+  delete r.sequence; delete r.step; delete r.tiles;
+  store.set(save);
+}
 const refillsLeft = () => Math.max(0, CONFIG.maxRefills - save.refillsUsed);
 const isGameOver = () => !save.round && !save.cards.length && !refillsLeft();
 
-let round = null; // the card in play (same object as save.round until it is won): { rarity, winner, sequence, step, counts, tiles, done }
+let round = null; // the card in play (same object as save.round until it is won): { rarity, winner, board, opened, counts, done }
 
 // ---------- Helpers ----------
 function pickWeighted(weights) {
@@ -417,20 +457,19 @@ const pic = (src, emoji, cls = 'ico') => src ? `<img class="${cls}" src="${src}"
 const prizeIcon = i => pic(CONFIG.prizes[i].img, CONFIG.prizes[i].icon);
 const GEM = pic(CONFIG.art.gem, '💎', 'ico gem');
 
-// The result is decided when the card starts (like the real game's "100% win rate").
-// Whichever tile you open next shows the next symbol in this sequence,
-// and the 3rd copy of the winning symbol is always the last one.
-function buildSequence(winner) {
-  const seq = [winner, winner];
+// Every tile gets its symbol when the card starts, like a real scratch card ("100% win rate"):
+// 3 of the winning prize, at most 2 of each other prize (so nothing else can match) and "no prize" tiles.
+function buildBoard(winner) {
+  const syms = [winner, winner, winner];
   CONFIG.prizes.forEach((_, i) => {
     if (i === winner) return;
     const n = pickWeighted(CONFIG.loserCountWeights);
-    for (let k = 0; k < n; k++) seq.push(i);
+    for (let k = 0; k < n; k++) syms.push(i);
   });
-  shuffle(seq);
-  seq.push(winner);
-  return seq;
+  while (syms.length < CONFIG.tiles) syms.push(BLANK);
+  return shuffle(syms);
 }
+const faceHTML = sym => sym === BLANK ? '<span class="blank">✦</span>' : prizeIcon(sym);
 
 // ---------- Sound + haptics ----------
 let audio;
@@ -521,6 +560,7 @@ function buyUpgrade(id) {
 
 function renderStats() {
   $('bagCount').textContent = save.bag;
+  $('runCount').textContent = save.runGems;
   $('stats').innerHTML = `Played ${save.played} · ` + CONFIG.prizes.map((p, i) => prizeIcon(i) + save.wins[i]).join(' ');
 }
 
@@ -548,7 +588,14 @@ function drawCover(canvas) {
   ctx.restore();
 }
 
+let cardGen = 0; // bumps on every deal, so a finished card's timers can't touch the next card
+let advanceTimer = null;
 function dealCard() {
+  cardGen++;
+  clearTimeout(advanceTimer); advanceTimer = null;
+  renderStats(); // counters jump to their final values if a win's animation was skipped
+  $('banner').classList.remove('show');
+  $('openAll').hidden = true;
   const board = $('board');
   board.innerHTML = '';
   if (!save.round && !save.cards.length) {
@@ -569,7 +616,7 @@ function dealCard() {
   if (fresh) {
     const rarity = save.cards.shift();
     const winner = pickWeighted(prizeOdds());
-    save.round = { rarity, winner, sequence: buildSequence(winner), step: 0, counts: [0, 0, 0], tiles: Array(CONFIG.tiles).fill(null), done: false };
+    save.round = { rarity, winner, board: buildBoard(winner), opened: Array(CONFIG.tiles).fill(false), counts: [0, 0, 0], done: false };
     store.set(save);
   }
   round = save.round;
@@ -580,12 +627,12 @@ function dealCard() {
     const t = document.createElement('div');
     t.className = 'tile';
     t.innerHTML = '<div class="face"></div><canvas></canvas>';
-    const sym = round.tiles[i];
-    if (sym !== null) {
+    if (round.opened[i]) {
+      const sym = round.board[i];
       t.dataset.sym = sym;
-      t.querySelector('.face').innerHTML = prizeIcon(sym);
+      t.querySelector('.face').innerHTML = faceHTML(sym);
       t.classList.add('revealed');
-      t.classList.toggle('pair', round.counts[sym] === 2);
+      t.classList.toggle('pair', sym !== BLANK && round.counts[sym] === 2);
     }
     board.appendChild(t);
   }
@@ -593,29 +640,84 @@ function dealCard() {
   if (fresh && (rarity === 'legendary' || rarity === 'immortal')) {
     [523, 659, 784].forEach((f, i) => tone(f, 0.15, 'triangle', i * 0.07, 0.12)); buzz(40);
   }
+  $('openAll').hidden = false;
   renderTray(); renderPrizes();
 }
 
 function reveal(tile) {
-  const sym = round.sequence[round.step++];
-  round.tiles[[...tile.parentNode.children].indexOf(tile)] = sym;
+  const i = [...tile.parentNode.children].indexOf(tile), sym = round.board[i];
+  round.opened[i] = true;
   tile.dataset.sym = sym;
-  tile.querySelector('.face').innerHTML = prizeIcon(sym);
+  tile.querySelector('.face').innerHTML = faceHTML(sym);
   tile.classList.add('revealed');
-  round.counts[sym]++;
+  const n = sym === BLANK ? 0 : ++round.counts[sym];
   store.set(save);
-  const n = round.counts[sym];
-  scratch();
-  tone(500 + n * 180, 0.12, 'triangle', 0.03);
-  if (n >= 2) tone(1000 + n * 200, 0.15, 'sine', 0.11, 0.1); // extra chime for a pair
-  buzz(n === 2 ? [15, 40, 25] : 15);
-  revealFx(tile, n);
-  document.querySelectorAll(`.tile.revealed[data-sym="${sym}"]`).forEach(t => t.classList.toggle('pair', n === 2));
-  if (n === 3) win(sym); else updatePrizeSlots();
+  buzz(10);
+  // The game state updates now; the sounds, burst and match feedback land when the scratch finishes
+  const ms = scratchOff(tile, () => {
+    if (!n) { revealFx(tile, 0); return; }
+    tone(500 + n * 180, 0.12, 'triangle');
+    if (n >= 2) tone(1000 + n * 200, 0.15, 'sine', 0.08, 0.1); // extra chime for a pair
+    buzz(n === 2 ? [15, 40, 25] : 15);
+    revealFx(tile, n);
+    if (n < 3) {
+      document.querySelectorAll(`.tile.revealed[data-sym="${sym}"]`).forEach(t => t.classList.toggle('pair', n === 2));
+      updatePrizeSlots();
+    }
+  });
+  if (n === 3) win(sym, ms);
+}
+
+// Tapping a tile scratches its foil off: a few quick zigzag strokes erase the cover on its canvas, so the
+// symbol shows through the lines, with silver flakes falling from the coin's edge. Then the rest of the foil
+// spins away (CSS). Calls done() when finished and returns how long that takes.
+function scratchOff(tile, done) {
+  const canvas = tile.querySelector('canvas');
+  if (reducedMotion() || !canvas || !canvas.width) { done(); return 0; } // reduced motion: the cover just fades
+  const gen = cardGen, ms = CONFIG.scratchMs, S = canvas.width, ctx = canvas.getContext('2d');
+  tile.classList.add('scratching');
+  scratch(ms / 1000, 0.1);
+  // Zigzag across the coin, a little different every time
+  const pts = [];
+  for (let r = 0; r <= 4; r++) pts.push([S * (r % 2 ? 0.86 : 0.14) + (Math.random() - 0.5) * S * 0.08, S * (0.16 + 0.17 * r) + (Math.random() - 0.5) * S * 0.06]);
+  const lens = pts.slice(1).map((p, k) => Math.hypot(p[0] - pts[k][0], p[1] - pts[k][1]));
+  const total = lens.reduce((a, b) => a + b, 0);
+  const pointAt = d => { // the point d px along the zigzag
+    for (let k = 0; k < lens.length; k++) { if (d <= lens[k]) { const f = d / lens[k]; return [pts[k][0] + (pts[k + 1][0] - pts[k][0]) * f, pts[k][1] + (pts[k + 1][1] - pts[k][1]) * f]; } d -= lens[k]; }
+    return pts[pts.length - 1];
+  };
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.lineCap = ctx.lineJoin = 'round'; ctx.lineWidth = S * 0.24;
+  const rect = tile.getBoundingClientRect(), start = performance.now();
+  let drawn = 0, last = pts[0];
+  const frame = now => {
+    if (gen !== cardGen) return;
+    const t = Math.min(1, (now - start) / ms), to = total * t;
+    ctx.beginPath(); ctx.moveTo(last[0], last[1]);
+    for (let d = drawn + S * 0.05; d < to; d += S * 0.05) { const q = pointAt(d); ctx.lineTo(q[0], q[1]); }
+    const tip = pointAt(to); ctx.lineTo(tip[0], tip[1]); ctx.stroke();
+    drawn = to; last = tip;
+    if (Element.prototype.animate) flake(rect.left + tip[0] / S * rect.width, rect.top + tip[1] / S * rect.height);
+    if (t < 1) requestAnimationFrame(frame);
+    else { tile.classList.remove('scratching'); done(); }
+  };
+  requestAnimationFrame(frame);
+  return ms;
+}
+// One silver flake flicked off the scratch tip, falling away
+function flake(x, y) {
+  const el = document.createElement('div');
+  el.className = 'fx flake';
+  document.body.appendChild(el);
+  const dx = (Math.random() - 0.5) * 50, dy = 20 + Math.random() * 30, rot = (Math.random() - 0.5) * 540;
+  el.animate([
+    { transform: `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(0deg)`, opacity: 1 },
+    { transform: `translate(${x + dx}px, ${y + dy}px) translate(-50%, -50%) rotate(${rot}deg)`, opacity: 0 },
+  ], { duration: 380 + Math.random() * 200, easing: 'cubic-bezier(.3, .4, .6, 1)', fill: 'forwards' }).onfinish = () => el.remove();
 }
 
 // Opening a tile: the face bounces in, foil shards and sparkles burst out and a ring ripples away.
-// The burst grows with n (copies of this symbol now open), and a pair gets a "So close!" cheer.
+// The burst grows with n (copies of this symbol now open; 0 for a "no prize" tile), and a pair gets a "So close!" cheer.
 function revealFx(tile, n) {
   const reduced = reducedMotion();
   tile.classList.add(reduced ? 'glow' : 'opened'); // left on: removing it would restart the base pop animation
@@ -636,7 +738,7 @@ function revealFx(tile, n) {
     if (cheer) play(fx('cheer', cheer), [{ transform: at(0, -r.height * 0.6), opacity: 0 }, { transform: at(0, -r.height * 0.6), opacity: 1, offset: .2 }, { transform: at(0, -r.height * 0.6), opacity: 0 }], { duration: 900 });
     return;
   }
-  const color = ['#fff4b0', '#ff8ad0', '#ffd84a'][n - 1];
+  const color = ['#ffffff', '#fff4b0', '#ff8ad0', '#ffd84a'][n];
 
   const ring = fx('ring');
   ring.style.width = ring.style.height = r.width * 0.8 + 'px';
@@ -652,7 +754,7 @@ function revealFx(tile, n) {
     ], { duration: 500 + Math.random() * 200, easing: 'cubic-bezier(.2, .6, .4, 1)' });
   }
 
-  const sparks = 4 + n * 3;
+  const sparks = n ? 4 + n * 3 : 3;
   for (let i = 0; i < sparks; i++) {
     const ang = Math.random() * Math.PI * 2, dist = r.width * (0.4 + Math.random() * (0.3 + n * 0.2));
     const s = fx('spark', '✦');
@@ -672,44 +774,84 @@ function revealFx(tile, n) {
   ], { duration: 950, easing: 'ease-out' });
 }
 
-function win(sym) {
-  round.done = true;
-  const p = CONFIG.prizes[sym];
-  const reward = rewardFor(sym, round.rarity);
-  document.querySelectorAll('.tile').forEach(t => {
-    t.classList.remove('pair');
-    if (+t.dataset.sym === sym && t.classList.contains('revealed')) t.classList.add('win');
-    else t.classList.add('dim');
-  });
-  updatePrizeSlots();
-  [660, 830, 990, 1320].forEach((f, i) => tone(f, 0.18, 'triangle', i * 0.09, 0.18)); buzz([30, 40, 60]);
-  const before = save.bag;
+let winAt = 0;
+// The reward is paid at once (a refresh can't lose it); the celebration starts after `delay` ms (the scratch)
+function win(sym, delay = 0) {
+  round.done = true; winAt = Infinity; // taps on the card are ignored until the celebration has been up a moment
+  $('openAll').hidden = true;
+  const p = CONFIG.prizes[sym], gen = cardGen, rarity = round.rarity, board = round.board;
+  const reward = rewardFor(sym, rarity);
+  const before = save.bag, runBefore = save.runGems;
   save.bag += reward; save.runGems += reward; save.played++; save.wins[sym]++;
   save.round = null; // reward is paid, so a refresh now moves on to the next card
   store.set(save);
-  const showPopup = () => {
-    renderStats();
-    $('popRarity').textContent = `${CONFIG.rarities[round.rarity].label} card`;
-    $('popTitle').textContent = p.name + '!';
-    $('popIcon').innerHTML = prizeIcon(sym).repeat(3);
-    $('popBtn').textContent = save.cards.length ? 'Next card' : refillsLeft() ? 'OK' : 'See results';
-    $('overlay').classList.add('show');
-    countUp($('popRewardN'), reward, n => n);
-  };
-  const shown = n => { $('bagCount').textContent = n; $('bag').classList.add('bump'); setTimeout(() => $('bag').classList.remove('bump'), 120); };
-  if (reducedMotion()) {
-    // Players who asked for less motion get a sparkle + count-up on the counter instead of flying gems
+
+  const celebrate = () => {
+    if (gen !== cardGen) return;
+    winAt = performance.now();
+    document.querySelectorAll('.tile').forEach(t => {
+      t.classList.remove('pair');
+      if (+t.dataset.sym === sym && t.classList.contains('revealed')) t.classList.add('win');
+      else t.classList.add('dim');
+    });
+    updatePrizeSlots();
+    [660, 830, 990, 1320].forEach((f, i) => tone(f, 0.18, 'triangle', i * 0.09, 0.18)); buzz([30, 40, 60]);
+
+    // Reveal-all: the tiles nobody opened turn over, so you see the whole card
+    const rest = [...document.querySelectorAll('.tile:not(.revealed)')];
+    rest.forEach((t, k) => setTimeout(() => {
+      if (gen !== cardGen) return;
+      const i = [...t.parentNode.children].indexOf(t);
+      t.dataset.sym = board[i];
+      t.querySelector('.face').innerHTML = faceHTML(board[i]);
+      t.classList.add('revealed', 'rest', 'dim');
+    }, 250 + (reducedMotion() ? 0 : k * CONFIG.revealAllStagger)));
+
+    // Prize banner on the card instead of a popup: the next card deals itself, or tap the card to skip ahead
+    $('banner').innerHTML = `<span class="b-icons">${prizeIcon(sym).repeat(3)}</span><span class="b-title">${p.name}!</span>
+      <span class="b-gems">+${GEM} <span id="bannerGems">0</span></span>`;
     setTimeout(() => {
-      $('bag').classList.add('shine');
-      countUp($('bagCount'), save.bag, n => n, 700, before);
-      [1200, 1500].forEach((f, i) => tone(f, 0.08, 'sine', i * 0.12, 0.08));
-      setTimeout(() => { $('bag').classList.remove('shine'); showPopup(); }, 900);
-    }, 500);
-    return;
-  }
-  setTimeout(() => gemBurst(document.querySelectorAll('.tile.win'), CONFIG.rarities[round.rarity].gems,
-    (i, count) => { shown(Math.round(before + reward * (i + 1) / count)); tone(1200 + i * 40, 0.05, 'sine', 0, 0.08); },
-    () => setTimeout(showPopup, 250)), 500);
+      if (gen !== cardGen) return;
+      $('banner').classList.add('show');
+      countUp($('bannerGems'), reward, n => n);
+    }, 350);
+
+    const shown = n => {
+      $('bagCount').textContent = before + n; $('runCount').textContent = runBefore + n;
+      ['bag', 'run'].forEach(id => { $(id).classList.add('bump'); setTimeout(() => $(id).classList.remove('bump'), 120); });
+    };
+    const next = () => { if (gen === cardGen) advanceTimer = setTimeout(dealCard, CONFIG.nextCardDelay); };
+    if (reducedMotion()) {
+      // Players who asked for less motion get a sparkle + count-up on the counters instead of flying gems
+      setTimeout(() => {
+        $('bag').classList.add('shine');
+        countUp($('bagCount'), save.bag, n => n, 700, before);
+        countUp($('runCount'), save.runGems, n => n, 700, runBefore);
+        [1200, 1500].forEach((f, i) => tone(f, 0.08, 'sine', i * 0.12, 0.08));
+        setTimeout(() => { $('bag').classList.remove('shine'); next(); }, 900);
+      }, 500);
+      return;
+    }
+    setTimeout(() => gemBurst(gen === cardGen ? document.querySelectorAll('.tile.win') : [], CONFIG.rarities[rarity].gems,
+      (i, count) => { shown(Math.round(reward * (i + 1) / count)); tone(1200 + i * 40, 0.05, 'sine', 0, 0.08); },
+      next), 500);
+  };
+  setTimeout(celebrate, delay);
+}
+
+// "Open all": scratches the remaining tiles one after another until the prize is found
+let openingAll = false;
+function openAll() {
+  if (!round || round.done || openingAll) return;
+  openingAll = true; $('openAll').hidden = true;
+  const gen = cardGen;
+  const step = () => {
+    const tile = document.querySelector('#board .tile:not(.revealed)');
+    if (gen !== cardGen || !round || round.done || !tile) { openingAll = false; return; }
+    reveal(tile);
+    setTimeout(step, reducedMotion() ? 60 : 110);
+  };
+  step();
 }
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -815,9 +957,9 @@ async function submitScore(e) {
     $('submitScore').disabled = false;
   }
 }
-// Upgrades and your name stay; 💎, cards, refills and the score reset
+// 💎, upgrades and your name stay; cards, refills and this game's score reset
 function newGame() {
-  save = { ...newSave(save.upgrades), playerName: save.playerName, lastScore: save.lastScore };
+  save = { ...newSave(save.upgrades), bag: save.bag, playerName: save.playerName, lastScore: save.lastScore };
   store.set(save);
   $('over').classList.remove('show');
   renderStats(); dealCard();
@@ -834,13 +976,16 @@ function countUp(el, to, fmt, ms = 600, from = 0) {
 }
 
 // ---------- Input ----------
-$('board').addEventListener('click', e => {
-  if (!round || round.done) return;
+$('ticket').addEventListener('click', e => {
+  if (e.target.closest('#openAll')) return;
+  // Finished card: tap anywhere on it to go straight to the next (not right away, so a double-tap doesn't skip the win)
+  if (round && round.done) { if (performance.now() - winAt > 600) dealCard(); return; }
+  if (!round || openingAll) return;
   const tile = e.target.closest('.tile');
   if (!tile || tile.classList.contains('revealed')) return;
   reveal(tile);
 });
-$('popBtn').onclick = () => { $('overlay').classList.remove('show'); dealCard(); };
+$('openAll').onclick = openAll;
 $('getCards').onclick = () => {
   if (!refillsLeft()) return;
   save.refillsUsed++;
@@ -862,7 +1007,7 @@ $('upgrades').addEventListener('click', e => {
 $('reset').onclick = () => {
   if (!confirm('Reset all progress?')) return;
   save = newSave();
-  store.set(save); $('overlay').classList.remove('show'); $('over').classList.remove('show'); renderStats(); dealCard();
+  store.set(save); $('over').classList.remove('show'); renderStats(); dealCard();
 };
 window.addEventListener('resize', () => {
   document.querySelectorAll('.tile:not(.revealed) canvas').forEach(drawCover);

@@ -47,9 +47,16 @@ async function fakeSupabase(page) {
     return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify([...db].sort((a, b) => b.score - a.score || a.created_at - b.created_at).slice(0, limit)) });
   });
 }
+// Taps unopened tiles until this card's win shows. Clicks the tile found right now (not a locator that would
+// wait and land on the next card once this one is done).
 const playUntilWin = async page => {
-  while (!(await page.$('.tile.win'))) await page.locator('.tile:not(.revealed)').first().click();
+  while (!(await page.$('.tile.win'))) {
+    const tile = await page.$('.tile:not(.revealed)');
+    if (tile) await tile.click({ timeout: 1000 }).catch(() => {}); else await page.waitForTimeout(50);
+  }
 };
+// After a win the next card deals itself (or the empty / game over state shows)
+const waitNextCard = p => p.waitForFunction(() => !document.querySelector('.tile.win'), null, { timeout: 8000 });
 const tileState = page => page.evaluate(() => [...document.querySelectorAll('.tile')].map(t => t.dataset.sym ?? '-').join(''));
 const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrades: {} });
 
@@ -57,7 +64,7 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   // CHROMIUM_PATH lets the test use an already-installed Chromium (e.g. in cloud sandboxes)
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 
-  // --- Normal motion: refresh resume, gem burst, popup, empty state, shop ---
+  // --- Normal motion: refresh resume, gem burst, reveal-all, auto next card, empty state, shop ---
   const page = await openGame(browser, freshSave(['immortal', 'rare']));
   await shot(page, '1-start');
   check(await page.$('.card.current') !== null, 'current card is highlighted in the tray');
@@ -69,8 +76,15 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
 
   const tiles = page.locator('.tile:not(.revealed)');
   await tiles.nth(0).click();
-  await page.waitForTimeout(120);
+  await page.waitForTimeout(150);
+  // Mid-scratch: the cover is still showing (being erased in strokes) and flakes are falling
+  const mid = await page.evaluate(() => ({ scratching: document.querySelectorAll('.tile.scratching').length, flakes: document.querySelectorAll('.fx.flake').length,
+    coverShown: getComputedStyle(document.querySelector('.tile.scratching canvas') || document.body).opacity === '1' }));
+  check(mid.scratching === 1 && mid.coverShown && mid.flakes > 0, `tapping a tile scratches the foil off, with flakes (${JSON.stringify(mid)})`);
+  await shot(page, '1a-scratching');
+  await page.waitForTimeout(250);
   const fx = await page.evaluate(() => ({ shards: document.querySelectorAll('.fx.shard').length, sparks: document.querySelectorAll('.fx.spark').length, ring: document.querySelectorAll('.fx.ring').length }));
+  check(!(await page.$('.tile.scratching')), 'scratch finishes, then the prize pops');
   check(fx.shards > 0 && fx.sparks > 0 && fx.ring === 1, `opening a tile bursts shards, sparkles and a ring (${JSON.stringify(fx)})`);
   check(await page.$('.tile.opened') !== null, 'opened tile bounces in');
   await shot(page, '1b-tile-open-burst');
@@ -87,18 +101,25 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   await page.waitForTimeout(950);
   const flying = await page.locator('.fly-gem').count();
   check(flying === 26, `immortal win sends 26 gems flying (got ${flying})`);
+  check(await page.locator('.tile.revealed').count() === 16, 'after a win the whole card reveals itself');
+  check(await page.isVisible('#banner') && !(await page.$('.overlay.show')), 'win shows a banner on the card, no popup to tap');
   await shot(page, '3-gems-flying');
-  await page.waitForSelector('#overlay.show', { timeout: 5000 });
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(1300);
   const bag = +(await page.textContent('#bagCount'));
-  const popup = await page.textContent('#popRewardN');
-  check(bag > 0 && +popup === bag, `counter and popup agree (${bag}, "${popup}")`);
-  await shot(page, '4-popup');
+  check(bag > 0 && +(await page.textContent('#bannerGems')) === bag && +(await page.textContent('#runCount')) === bag,
+    `banner, 💎 counter and "This game" counter agree (${bag})`);
+  await shot(page, '4-win-banner');
+  await waitNextCard(page);
+  check(await page.textContent('#rarity') === 'Rare' && !(await page.isVisible('#banner')), 'next card deals itself without a tap');
+  check((await page.textContent('#stats')).startsWith('Played 1'), 'stats count the win');
 
-  await page.click('#popBtn'); await page.waitForTimeout(300);
   await playUntilWin(page);
-  await page.waitForSelector('#overlay.show', { timeout: 5000 });
-  await page.click('#popBtn'); await page.waitForTimeout(600);
+  await page.waitForTimeout(700);
+  const tapAt = Date.now();
+  await page.click('#ticket');
+  await waitNextCard(page);
+  check(Date.now() - tapAt < 500 && await page.isVisible('#empty'), 'tapping a finished card skips straight ahead');
+  await page.waitForTimeout(1500);
   const height = (await page.locator('#ticket').boundingBox()).height;
   check(height > 250, `empty ticket keeps its size (${Math.round(height)}px)`);
   await shot(page, '5-empty');
@@ -109,36 +130,56 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   check(page.errors.length === 0, `no page errors ${page.errors.length ? JSON.stringify(page.errors) : ''}`);
   await page.close();
 
-  // --- Opening the 2nd copy of a symbol cheers "So close!" (card set up so the first two tiles are a pair) ---
-  const seq = [0, 0, 1, 2, 2, 0];
-  const cpage = await openGame(browser, { ...freshSave([]), round: { rarity: 'rare', winner: 0, sequence: seq, step: 0, counts: [0, 0, 0], tiles: Array(16).fill(null), done: false } });
-  await cpage.locator('.tile').nth(0).click();
+  // --- Real board: every tile has its symbol from the start; blanks, "So close!", Open all ---
+  const b = Array(16).fill(-1); b[0] = 0; b[5] = 0; b[9] = 0; b[3] = 1; b[7] = 2; b[8] = 2;
+  const cpage = await openGame(browser, { ...freshSave([]), round: { rarity: 'rare', winner: 0, board: b, opened: Array(16).fill(false), counts: [0, 0, 0], done: false } });
+  const boards = await cpage.evaluate(() => Array.from({ length: 300 }, (_, k) => ({ w: k % 3, b: buildBoard(k % 3) })));
+  const count = (b, s) => b.filter(x => x === s).length;
+  check(boards.every(({ w, b }) => b.length === 16 && [0, 1, 2].every(s => s === w ? count(b, s) === 3 : count(b, s) <= 2)),
+    'every new board: 16 tiles, exactly 3 of the winner, at most 2 of each other prize, the rest blank');
+  await cpage.locator('.tile').nth(15).click();
   await cpage.waitForTimeout(150);
+  check(await cpage.$('.tile:nth-child(16) .face .blank') !== null && await cpage.locator('.fx.cheer').count() === 0, 'a "no prize" tile shows a blank');
+  await cpage.locator('.tile').nth(0).click();
+  await cpage.waitForTimeout(450);
   check(await cpage.locator('.fx.cheer').count() === 0, 'first copy of a symbol: no cheer');
   await cpage.waitForTimeout(800);
   await cpage.locator('.tile').nth(5).click();
-  await cpage.waitForTimeout(250);
-  check(await cpage.locator('.fx.cheer', { hasText: 'So close!' }).count() === 1, 'a pair shows the "So close!" cheer');
+  await cpage.waitForTimeout(450); // cheer lands after the scratch
+  check(await cpage.locator('.fx.cheer', { hasText: 'So close!' }).count() === 1, 'a pair shows the "So close!" cheer (tiles open in any order)');
   await shot(cpage, '2b-so-close');
-  check(cpage.errors.length === 0, 'pair cheer: no page errors');
+  await cpage.waitForTimeout(800);
+  await cpage.click('#openAll');
+  await cpage.waitForSelector('.tile.win', { timeout: 5000 });
+  const won = await cpage.evaluate(() => [...document.querySelectorAll('.tile.win')].map(t => [...t.parentNode.children].indexOf(t)).join());
+  check(won === '0,5,9', `Open all scratches the card until the prize is found (wins on tiles ${won})`);
+  await cpage.waitForTimeout(1200);
+  check(await cpage.locator('.tile.revealed').count() === 16, 'Open all: the rest of the card reveals itself');
+  await shot(cpage, '2c-reveal-all');
+  check(cpage.errors.length === 0, 'real board: no page errors');
   await cpage.close();
+
+  // --- A card saved by an older version (symbols handed out in tap order) still plays ---
+  const old = { rarity: 'epic', winner: 1, sequence: [2, 1, 1, 0, 1], step: 2, counts: [0, 2, 1], tiles: [2, 1, ...Array(14).fill(null)], done: false };
+  const mpage = await openGame(browser, { ...freshSave([]), round: old });
+  const m = await mpage.evaluate(() => JSON.parse(localStorage.getItem('luckycard')).round);
+  check(m.board.length === 16 && m.board[0] === 2 && m.board[1] === 1 && m.board.filter(x => x === 1).length === 3 && m.opened.filter(Boolean).length === 2
+    && await mpage.locator('.tile.revealed').count() === 2, 'old in-progress card is converted to a full board');
+  await playUntilWin(mpage);
+  check(+(await mpage.evaluate(() => JSON.parse(localStorage.getItem('luckycard')).wins[1])) === 1 && mpage.errors.length === 0, 'old card: still wins its prize');
+  await mpage.close();
 
   // --- Get Cards limit, game over, leaderboard (keeps upgrades on New game) ---
   const gpage = await openGame(browser, { ...freshSave(['rare']), bag: 50, refillsUsed: 1, upgrades: { luck: 2 } });
   check(await gpage.textContent('#refillsLeft') === '1 left', 'Get Cards shows refills left');
-  const finishCard = async p => { await playUntilWin(p); await p.waitForSelector('#overlay.show', { timeout: 5000 }); await p.click('#popBtn'); await p.waitForTimeout(300); };
+  const finishCard = async p => { await playUntilWin(p); await waitNextCard(p); await p.waitForTimeout(200); };
   await finishCard(gpage);
   check(!(await gpage.$('#over.show')), 'out of cards with a refill left: not game over yet');
   await gpage.click('#getCards'); await gpage.waitForTimeout(200);
   check(await gpage.isDisabled('#getCards') && await gpage.textContent('#refillsLeft') === '0 left', 'Get Cards is disabled after the last refill');
   await shot(gpage, '7-no-refills');
-  for (let i = 0; i < 3; i++) {
-    await playUntilWin(gpage);
-    await gpage.waitForSelector('#overlay.show', { timeout: 5000 });
-    if (i === 2) check(await gpage.textContent('#popBtn') === 'See results', 'last card\'s popup says "See results"');
-    await gpage.click('#popBtn'); await gpage.waitForTimeout(300);
-  }
-  check(!!(await gpage.$('#over.show')), 'game over shows when cards and refills run out');
+  for (let i = 0; i < 3; i++) await finishCard(gpage);
+  check(!!(await gpage.waitForSelector('#over.show', { timeout: 3000 })), 'game over shows by itself when cards and refills run out');
   const g = await gpage.evaluate(() => JSON.parse(localStorage.getItem('luckycard')));
   check(g.runGems > 0 && g.runGems === g.bag - 50 && +(await gpage.textContent('#runGems')) === g.runGems, `game over shows 💎 earned this game (${g.runGems})`);
   await shot(gpage, '8-game-over');
@@ -155,8 +196,9 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   await gpage.click('#shopClose');
   await gpage.click('#newGame'); await gpage.waitForTimeout(500);
   const n = await gpage.evaluate(() => JSON.parse(localStorage.getItem('luckycard')));
-  check(n.bag === 0 && n.runGems === 0 && n.upgrades.luck === 2 && n.round && n.cards.length === 2 && !(await gpage.$('#over.show'))
-    && await gpage.textContent('#refillsLeft') === '2 left', 'New game resets 💎, cards and refills but keeps upgrades');
+  check(n.bag === g.bag && n.runGems === 0 && n.upgrades.luck === 2 && n.round && n.cards.length === 2 && !(await gpage.$('#over.show'))
+    && await gpage.textContent('#refillsLeft') === '2 left' && +(await gpage.textContent('#bagCount')) === g.bag && await gpage.textContent('#runCount') === '0',
+    `New game keeps 💎 (${n.bag}) and upgrades; resets cards, refills and "This game"`);
   await gpage.click('#lbBtn');
   await gpage.waitForSelector('#lbBoard li.me', { timeout: 3000 });
   await gpage.waitForTimeout(300);
@@ -208,9 +250,8 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
     await rpage.waitForTimeout(100);
   }
   check(!sawGems && sawShine, 'reduced motion: counter glows instead of flying gems');
-  await rpage.waitForSelector('#overlay.show', { timeout: 3000 });
-  await rpage.waitForTimeout(700);
-  check(+(await rpage.textContent('#bagCount')) > 100, 'reduced motion: reward still added');
+  await waitNextCard(rpage);
+  check(+(await rpage.textContent('#bagCount')) > 100 && await rpage.isVisible('#empty'), 'reduced motion: reward still added, then moves on by itself');
   check(rpage.errors.length === 0, 'reduced motion: no page errors');
 
   await browser.close();
