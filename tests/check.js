@@ -18,11 +18,34 @@ async function openGame(browser, saveData, options = {}) {
   page.errors = [];
   page.on('pageerror', e => page.errors.push(e.message));
   page.on('console', m => m.type() === 'error' && !m.text().includes('navigator.vibrate') && page.errors.push(m.text()));
+  await fakeSupabase(page);
   await page.goto(url);
   await page.evaluate(s => localStorage.setItem('luckycard', JSON.stringify(s)), saveData);
   await page.reload();
   await page.waitForTimeout(800);
   return page;
+}
+// Every page talks to an in-memory fake of Supabase's REST API, so tests never touch the real leaderboard.
+// page.fake: { db (rows), failNextPost, keys (apikey headers seen) }
+async function fakeSupabase(page) {
+  const fake = page.fake = { db: [], failNextPost: false, keys: new Set() };
+  const cors = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range' };
+  await page.route('**/rest/v1/**', async route => {
+    const req = route.request(), u = new URL(req.url()), db = fake.db;
+    fake.keys.add(req.headers().apikey);
+    if (req.method() === 'POST') {
+      if (fake.failNextPost) { fake.failNextPost = false; return route.fulfill({ status: 503, headers: cors, body: 'down' }); }
+      const row = { ...JSON.parse(req.postData()), id: db.length + 1, created_at: db.length };
+      db.push(row);
+      return route.fulfill({ status: 201, headers: cors, contentType: 'application/json', body: JSON.stringify([row]) });
+    }
+    if (req.method() === 'HEAD') {
+      const gt = +u.searchParams.get('score').replace('gt.', '');
+      return route.fulfill({ status: 200, headers: { ...cors, 'content-range': `*/${db.filter(r => r.score > gt).length}` } });
+    }
+    const limit = +u.searchParams.get('limit');
+    return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify([...db].sort((a, b) => b.score - a.score || a.created_at - b.created_at).slice(0, limit)) });
+  });
 }
 const playUntilWin = async page => {
   while (!(await page.$('.tile.win'))) await page.locator('.tile:not(.revealed)').first().click();
@@ -100,7 +123,7 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   check(cpage.errors.length === 0, 'pair cheer: no page errors');
   await cpage.close();
 
-  // --- Get Cards limit, game over, leaderboard on this device (keeps upgrades on New game) ---
+  // --- Get Cards limit, game over, leaderboard (keeps upgrades on New game) ---
   const gpage = await openGame(browser, { ...freshSave(['rare']), bag: 50, refillsUsed: 1, upgrades: { luck: 2 } });
   check(await gpage.textContent('#refillsLeft') === '1 left', 'Get Cards shows refills left');
   const finishCard = async p => { await playUntilWin(p); await p.waitForSelector('#overlay.show', { timeout: 5000 }); await p.click('#popBtn'); await p.waitForTimeout(300); };
@@ -137,32 +160,15 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   await gpage.click('#lbBtn');
   await gpage.waitForSelector('#lbBoard li.me', { timeout: 3000 });
   await gpage.waitForTimeout(300);
-  check((await gpage.textContent('#lbBoard .lb-src')).includes('this device'), '🏆 shows the leaderboard (this device when not set up online)');
+  check(await gpage.textContent('#lbBoard .lb-src') === 'All players' && gpage.fake.db.length === 1, '🏆 shows the online leaderboard with your score');
   await shot(gpage, '10-leaderboard-button');
   check(gpage.errors.length === 0, `game over: no page errors ${gpage.errors.length ? JSON.stringify(gpage.errors) : ''}`);
   await gpage.close();
 
   // --- Online leaderboard against a fake Supabase ---
   const opage = await openGame(browser, { ...freshSave([]), refillsUsed: 2, runGems: 40 });
-  const db = Array.from({ length: 12 }, (_, i) => ({ id: i + 1, name: 'Pro' + i, score: 100 + i, created_at: i }));
-  let posts = 0, sawKey = true;
-  await opage.route('https://lb.test/rest/v1/**', async route => {
-    const req = route.request(), u = new URL(req.url());
-    if (req.headers().apikey !== 'test-key') sawKey = false;
-    if (req.method() === 'POST') {
-      if (++posts === 1) return route.fulfill({ status: 503, body: 'down' }); // first try fails
-      const row = { ...JSON.parse(req.postData()), id: db.length + 1, created_at: db.length };
-      db.push(row);
-      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([row]) });
-    }
-    if (req.method() === 'HEAD') {
-      const gt = +u.searchParams.get('score').replace('gt.', '');
-      return route.fulfill({ status: 200, headers: { 'content-range': `*/${db.filter(r => r.score > gt).length}`, 'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range' } });
-    }
-    const limit = +u.searchParams.get('limit');
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([...db].sort((a, b) => b.score - a.score || a.created_at - b.created_at).slice(0, limit)) });
-  });
-  await opage.evaluate(() => { CONFIG.leaderboard.url = 'https://lb.test/'; CONFIG.leaderboard.key = 'test-key'; });
+  opage.fake.db.push(...Array.from({ length: 12 }, (_, i) => ({ id: i + 1, name: 'Pro' + i, score: 100 + i, created_at: i })));
+  opage.fake.failNextPost = true; // first submit fails
   check(!!(await opage.$('#over.show')), 'online: game over shows for a finished game');
   await opage.fill('#nameIn', 'Me');
   await opage.click('#submitScore'); await opage.waitForTimeout(300);
@@ -171,10 +177,22 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   await opage.waitForSelector('#overBoard li.me', { timeout: 3000 });
   const top = await opage.locator('#overBoard li:not(.gap)').count();
   check(top === 11 && await opage.textContent('#overBoard li.me .pos') === '#13', `online: top 10 plus your rank when you're outside it (rows ${top}, ${await opage.textContent('#overBoard li.me .pos')})`);
-  check(sawKey && (await opage.textContent('#overBoard .lb-src')) === 'All players', 'online: requests carry the API key; board says "All players"');
+  const keys = [...opage.fake.keys];
+  check(keys.length === 1 && keys[0].startsWith('sb_publishable_') && (await opage.textContent('#overBoard .lb-src')) === 'All players', `online: requests carry the publishable key; board says "All players" (${keys})`);
   await shot(opage, '11-online-leaderboard');
   check(opage.errors.filter(e => !e.includes('Failed to load resource')).length === 0, 'online: no page errors');
   await opage.close();
+
+  // --- With url/key cleared, scores stay on this device ---
+  const dpage = await openGame(browser, { ...freshSave([]), refillsUsed: 2, runGems: 12 });
+  await dpage.evaluate(() => { CONFIG.leaderboard.url = ''; CONFIG.leaderboard.key = ''; });
+  await dpage.fill('#nameIn', 'Local');
+  await dpage.click('#submitScore');
+  await dpage.waitForSelector('#overBoard li.me', { timeout: 3000 });
+  check((await dpage.textContent('#overBoard .lb-src')).includes('this device') && dpage.fake.db.length === 0
+    && (await dpage.evaluate(() => JSON.parse(localStorage.getItem('luckycard-scores')).length)) === 1, 'no url/key: score is saved on this device, nothing sent online');
+  check(dpage.errors.length === 0, 'on-device: no page errors');
+  await dpage.close();
 
   // --- Reduced motion: no flying gems, counter glows and counts up ---
   const rpage = await openGame(browser, { ...freshSave(['immortal']), bag: 100 }, { reducedMotion: 'reduce' });

@@ -41,7 +41,7 @@ Lucky Draw only affects newly drawn cards, not cards already in the tray. Upgrad
 
 ## Online leaderboard (Supabase)
 
-Out of the box the leaderboard is stored on the device (it says "Scores on this device"). To rank **all players** together:
+The game is connected to the project `bftlvlwqueaqjjcgbfbb` and ranks **all players** together (the board says "All players"). If `CONFIG.leaderboard` url/key are empty, scores are stored on the device instead ("Scores on this device"). To set up a new project:
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. In the project, open **SQL Editor** and run:
@@ -56,15 +56,16 @@ Out of the box the leaderboard is stored on the device (it says "Scores on this 
    alter table scores enable row level security;
    create policy "anyone can read scores" on scores for select using (true);
    create policy "anyone can add scores" on scores for insert with check (true);
+   grant select, insert on scores to anon;
    ```
 
-3. In **Project Settings → API**, copy the **Project URL** and the **anon public** key into `CONFIG.leaderboard` in `index.html`:
+3. In **Project Settings → API Keys**, copy the **Publishable key** (`sb_publishable_…`, or the legacy **anon** key) and put it with the project URL into `CONFIG.leaderboard` in `index.html`. Never use the **secret** / **service_role** key: it gives full control of the database.
 
    ```js
-   leaderboard: { url: 'https://xxxx.supabase.co', key: 'eyJ...', size: 10 },
+   leaderboard: { url: 'https://xxxx.supabase.co', key: 'sb_publishable_...', size: 10 },
    ```
 
-The board then says "All players". The anon key is meant to be public, but since the game runs in the browser, someone determined could post a fake score; fine for a prototype, and you can delete rows in Supabase's **Table Editor**.
+The publishable key is meant to be public, but since the game runs in the browser, someone determined could post a fake score; fine for a prototype, and you can delete rows in Supabase's **Table Editor**.
 
 ## Art
 
@@ -90,5 +91,5 @@ The version shown at the bottom-left of the page is set by hand in `index.html` 
 ## Development
 
 - **Codespaces:** on GitHub, **Code → Codespaces → Create codespace on main**. The `.devcontainer` sets up Node, the Live Preview extension (open `index.html` → "Show Preview"), Claude Code, and Playwright with Chromium. Forwarded port 3000 lets you open the game on a phone.
-- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (art loads, tile-open burst, pair cheer, Get Cards limit, game over, leaderboard on-device and online against a fake server, refresh resume, gem burst, popup, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
+- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (art loads, tile-open burst, pair cheer, Get Cards limit, game over, leaderboard online and on-device against a fake Supabase (tests never send scores to the real leaderboard), refresh resume, gem burst, popup, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
 - **Before every push:** bump the version label, update this README, run `npm test` (see `CLAUDE.md`).
