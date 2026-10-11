@@ -56,7 +56,9 @@ The game is connected to the project `bftlvlwqueaqjjcgbfbb` and ranks **all play
    alter table scores enable row level security;
    create policy "anyone can read scores" on scores for select using (true);
    create policy "anyone can add scores" on scores for insert with check (true);
-   grant select, insert on scores to anon;
+   -- the game only reads and adds scores: drop Supabase's default extra privileges
+   revoke all on scores from anon, authenticated;
+   grant select, insert on scores to anon, authenticated;
    ```
 
 3. In **Project Settings → API Keys**, copy the **Publishable key** (`sb_publishable_…`, or the legacy **anon** key) and put it with the project URL into `CONFIG.leaderboard` in `index.html`. Never use the **secret** / **service_role** key: it gives full control of the database.
