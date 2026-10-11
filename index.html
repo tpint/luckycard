@@ -217,7 +217,7 @@
   /* gems flying to the counter on a win */
   .fly-gem { position: fixed; z-index: 20; font-size: 22px; pointer-events: none; filter: drop-shadow(0 0 6px #7fe3ff); }
 
-  /* art images (CONFIG.prizes[].img, CONFIG.art, CONFIG.rarities[].card) sized like the emoji they replace */
+  /* art images (CONFIG.treats[].img, CONFIG.art, CONFIG.rarities[].card) sized like the emoji they replace */
   .ico { width: 1.15em; height: 1.15em; vertical-align: -.22em; object-fit: contain; pointer-events: none; }
   .ico.gem { width: 1em; height: 1em; vertical-align: -.15em; }
   .tile .face .ico { width: 74%; height: 74%; }
@@ -319,7 +319,7 @@
   </div>
 
   <div class="bottom">
-    <div class="version">v2.3 <!-- bump on every push --></div>
+    <div class="version">v2.4 <!-- bump on every push --></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
   </div>
 </div>
@@ -370,10 +370,25 @@ const CONFIG = {
   // so a card has about 4 cake, 5 donut and 7 candy. You win whichever prize you match 3 of first; the chance of
   // that comes out close to these weights (the shop shows the exact %).
   prizeMix: [10, 30, 60],
+  // Prize tiers. Which treat stands for each tier changes every card (see treats); the medal stands for the tier
+  // where no single card is meant (stats line, shop).
   prizes: [
-    { name: '1st Prize', icon: '🍰', img: 'assets/cake.svg',  reward: 3 },
-    { name: '2nd Prize', icon: '🍩', img: 'assets/donut.svg', reward: 2 },
-    { name: '3rd Prize', icon: '🍬', img: 'assets/candy.svg', reward: 1 },
+    { name: '1st Prize', medal: '🥇', reward: 3 },
+    { name: '2nd Prize', medal: '🥈', reward: 2 },
+    { name: '3rd Prize', medal: '🥉', reward: 1 },
+  ],
+  // Treat pool: every new card picks 3 of these at random and randomly makes them its 1st, 2nd and 3rd prize
+  treats: [
+    { icon: '🍰', img: 'assets/cake.svg' },
+    { icon: '🍩', img: 'assets/donut.svg' },
+    { icon: '🍬', img: 'assets/candy.svg' },
+    { icon: '🍪', img: 'assets/cookie.svg' },
+    { icon: '🧁', img: 'assets/cupcake.svg' },
+    { icon: '🍦', img: 'assets/icecream.svg' },
+    { icon: '🍫', img: 'assets/chocolate.svg' },
+    { icon: '🍮', img: 'assets/pudding.svg' },
+    { icon: '🍒', img: 'assets/cherries.svg' },
+    { icon: '🍡', img: 'assets/dango.svg' },
   ],
   // Art files (see assets/). Swap any path for your own image; set it to '' to fall back to the emoji / drawn version.
   art: { gem: 'assets/gem.svg', cover: 'assets/cover.svg' },
@@ -410,7 +425,8 @@ save.refillsUsed = save.refillsUsed || 0; save.runGems = save.runGems || 0; // s
 const refillsLeft = () => Math.max(0, CONFIG.maxRefills - save.refillsUsed);
 const isGameOver = () => !save.round && !save.cards.length && !refillsLeft();
 
-let round = null; // the card in play (same object as save.round until it is won): { rarity, board, opened, counts, done, winner (once won) }
+let round = null; // the card in play (same object as save.round until it is won): { rarity, items, board, opened, counts, done, winner (once won) }
+// round.items: the treats (CONFIG.treats indexes) standing for this card's 1st, 2nd and 3rd prize; board symbols are tiers 0-2
 
 // Brings a card saved by an older version up to date (called once at start-up)
 function migrateRound() {
@@ -423,6 +439,7 @@ function migrateRound() {
     delete r.sequence; delete r.step; delete r.tiles;
   }
   delete r.winner; // the prize is no longer picked in advance
+  r.items = r.items || [0, 1, 2]; // cards from before the treat pool were cake / donut / candy
   // Empty tiles (v1.9-v2.0) get a prize and are covered again, so every tile holds a prize
   r.board.forEach((sym, i) => { if (!(sym >= 0 && sym < P)) { r.board[i] = pickWeighted(prizeMix()); r.opened[i] = false; } });
   store.set(save);
@@ -475,7 +492,10 @@ const baseReward = (prize, bonus = lvl('prize')) => CONFIG.prizes[prize].reward 
 const rewardFor = (prize, rarity) => baseReward(prize) * (rarity ? CONFIG.rarities[rarity].multiplier : 1);
 // Art: an <img> for the configured file, or the emoji when no file is set
 const pic = (src, emoji, cls = 'ico') => src ? `<img class="${cls}" src="${src}" alt="${emoji}" draggable="false">` : emoji;
-const prizeIcon = i => pic(CONFIG.prizes[i].img, CONFIG.prizes[i].icon);
+const treatIcon = k => pic(CONFIG.treats[k].img, CONFIG.treats[k].icon);
+// The treat standing for prize tier i on the card in play (its medal when there's no card)
+const prizeIcon = (i, items = round && round.items) => items ? treatIcon(items[i]) : CONFIG.prizes[i].medal;
+const medal = i => CONFIG.prizes[i].medal;
 const GEM = pic(CONFIG.art.gem, '💎', 'ico gem');
 
 // Every tile gets its prize when the card starts, like a real scratch card ("100% win rate"): each prize 3 times,
@@ -546,8 +566,8 @@ const change = (labels, now, next, unit = '') =>
   labels.map((l, i) => `<span class="chg">${l} ${next ? `${now[i]}${unit}→<b>${next[i]}${unit}</b>` : `<b>${now[i]}${unit}</b>`}</span>`).join(' · ');
 const upgradeEffects = {
   luck: next => change(Object.values(CONFIG.rarities).map(r => r.label), pcts(rarityWeights()), next && pcts(rarityWeights(lvl('luck') + 1)), '%'),
-  crown: next => change(CONFIG.prizes.map((_, i) => prizeIcon(i)), pcts(matchOdds(prizeMix())), next && pcts(matchOdds(prizeMix(lvl('crown') + 1))), '%'),
-  prize: next => `Base ${GEM} ` + change(CONFIG.prizes.map((_, i) => prizeIcon(i)), CONFIG.prizes.map((_, i) => baseReward(i)), next && CONFIG.prizes.map((_, i) => baseReward(i, lvl('prize') + 1))),
+  crown: next => change(CONFIG.prizes.map((_, i) => medal(i)), pcts(matchOdds(prizeMix())), next && pcts(matchOdds(prizeMix(lvl('crown') + 1))), '%'),
+  prize: next => `Base ${GEM} ` + change(CONFIG.prizes.map((_, i) => medal(i)), CONFIG.prizes.map((_, i) => baseReward(i)), next && CONFIG.prizes.map((_, i) => baseReward(i, lvl('prize') + 1))),
 };
 function renderShop() {
   $('shopBag').textContent = save.bag;
@@ -577,7 +597,7 @@ function buyUpgrade(id) {
 function renderStats() {
   $('bagCount').textContent = save.bag;
   $('runCount').textContent = save.runGems;
-  $('stats').innerHTML = `Played ${save.played} · ` + CONFIG.prizes.map((p, i) => prizeIcon(i) + save.wins[i]).join(' ');
+  $('stats').innerHTML = `Played ${save.played} · ` + CONFIG.prizes.map((p, i) => medal(i) + save.wins[i]).join(' ');
 }
 
 // Tile cover art; covers drawn before it loads are redrawn once it's ready
@@ -631,7 +651,8 @@ function dealCard() {
   const fresh = !save.round;
   if (fresh) {
     const rarity = save.cards.shift();
-    save.round = { rarity, board: buildBoard(), opened: Array(CONFIG.tiles).fill(false), counts: [0, 0, 0], done: false };
+    const items = shuffle(CONFIG.treats.map((_, k) => k)).slice(0, CONFIG.prizes.length);
+    save.round = { rarity, items, board: buildBoard(), opened: Array(CONFIG.tiles).fill(false), counts: [0, 0, 0], done: false };
     store.set(save);
   }
   round = save.round;

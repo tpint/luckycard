@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- LuckyCard original art: dango on a stick (decoy) -->
+  <path d="M58 228 L196 30" stroke="#d9a35c" stroke-width="12" stroke-linecap="round"/>
+  <g stroke="#5b3a2e" stroke-width="8">
+    <circle cx="170" cy="68" r="38" fill="#8fd18a"/><circle cx="128" cy="128" r="38" fill="#fff6ef"/><circle cx="86" cy="188" r="38" fill="#ff9ac0"/>
+  </g>
+  <g fill="#fff" opacity=".8"><circle cx="158" cy="54" r="8"/><circle cx="116" cy="114" r="8"/><circle cx="74" cy="174" r="8"/></g>
+</svg>

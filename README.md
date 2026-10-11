@@ -2,7 +2,7 @@
 
 A scratch-card game prototype: one HTML file plus its art in `assets/`. Each card is a 4×4 grid of tiles; tap tiles to open them, in any order, and find **3 matching patterns** to win that prize. Every card wins (100% win rate) — the prize tier and card rarity decide how much.
 
-Like a real scratch card, every tile gets its prize when the card starts, and every tile is a prize: each of 🍰 🍩 🍬 at least 3 times, about 4 🍰, 5 🍩 and 7 🍬 on a typical card. **You win whichever prize you match 3 of first**, so the order you tap in decides it, and a card always ends within 7 taps.
+Like a real scratch card, every tile gets its prize when the card starts, and every tile is a prize. Each card picks **3 random treats** from a pool of 10 (🍰 🍩 🍬 🍪 🧁 🍦 🍫 🍮 🍒 🍡) and randomly makes them its 1st, 2nd and 3rd prize, so any treat can be the top prize; the prize boxes show which is which. Each prize is on the card at least 3 times, about 4 / 5 / 7 for 1st / 2nd / 3rd on a typical card. **You win whichever prize you match 3 of first**, so the order you tap in decides it, and a card always ends within 7 taps.
 
 ## Play
 
@@ -12,7 +12,7 @@ Progress (💎 total, remaining cards, Get Cards left, the card in play with its
 
 ## How it works
 
-- **Prizes:** 1st 🍰 (3 💎), 2nd 🍩 (2 💎), 3rd 🍬 (1 💎). Chance of matching each first: about 11% / 28% / 60%. Each prize gets 3 tiles; the other 7 are split by `CONFIG.prizeMix` (10 / 30 / 60), and the shop shows the exact odds.
+- **Prizes:** 🥇 1st (3 💎), 🥈 2nd (2 💎), 🥉 3rd (1 💎), whichever treats the card picked. The stats line and the shop use the medals. Chance of matching each first: about 11% / 28% / 60%. Each prize gets 3 tiles; the other 7 are split by `CONFIG.prizeMix` (10 / 30 / 60), and the shop shows the exact odds.
 - **Card rarity** multiplies the reward:
 
   | Rarity    | Drop rate | Multiplier |
@@ -43,8 +43,8 @@ Tap **⬆ Upgrades** (top right) to spend 💎. Each level costs more than the l
 | Upgrade          | Effect per level                                   | Max | At max level                   |
 |------------------|----------------------------------------------------|-----|--------------------------------|
 | 🍀 Lucky Draw    | Shifts card rarity odds away from Rare             | 10  | Rare 25 / Epic 31 / Legendary 25 / Immortal 19% |
-| 🎯 Top Prize Chance | Puts more 🍰 and 🍩 and fewer 🍬 on new cards, so you're more likely to match them first | 5   | 🍰 25 / 🍩 45 / 🍬 30%          |
-| 💎 Bigger Prizes | +1 to every prize's base reward (before rarity ×)  | 5   | 🍰 8 / 🍩 7 / 🍬 6              |
+| 🎯 Top Prize Chance | Puts more 1st and 2nd prize and less 3rd prize on new cards, so you're more likely to match them first | 5   | 🥇 25 / 🥈 45 / 🥉 30%          |
+| 💎 Bigger Prizes | +1 to every prize's base reward (before rarity ×)  | 5   | 🥇 8 / 🥈 7 / 🥉 6              |
 
 Lucky Draw only affects newly drawn cards, not cards already in the tray. 💎 and upgrades carry over to a **New game**; **reset progress** resets both (the leaderboard is kept).
 
@@ -84,12 +84,12 @@ All graphics are original SVG files in `assets/`, drawn for LuckyCard:
 
 | File | Used for |
 |---|---|
-| `cake.svg`, `donut.svg`, `candy.svg` | Prize symbols (tiles, prize boxes, win ribbon, stats) |
+| `cake.svg`, `donut.svg`, `candy.svg`, `cookie.svg`, `cupcake.svg`, `icecream.svg`, `chocolate.svg`, `pudding.svg`, `cherries.svg`, `dango.svg` | The treat pool (`CONFIG.treats`): tiles, prize boxes, win ribbon |
 | `gem.svg` | 💎 everywhere (counter, rewards, flying gems, shop, leaderboard) |
 | `cover.svg` | Scratch-off tile cover |
 | `card-rare.svg`, `card-epic.svg`, `card-legendary.svg`, `card-immortal.svg` | Card backs in the tray |
 
-**To use your own art:** put your file in `assets/` and change its path in `CONFIG` (`prizes[].img`, `art.gem`, `art.cover`, `rarities[].card`). PNG, WebP or SVG all work; square images with a transparent background look best (about 256×256 for symbols and the cover, 84×116 for card backs). Set a path to `''` to go back to the emoji / built-in drawing.
+**To use your own art:** put your file in `assets/` and change its path in `CONFIG` (`treats[].img`, `art.gem`, `art.cover`, `rarities[].card`). PNG, WebP or SVG all work; square images with a transparent background look best (about 256×256 for symbols and the cover, 84×116 for card backs). Set a path to `''` to go back to the emoji / built-in drawing.
 
 ## Tuning
 
@@ -102,5 +102,5 @@ The version shown at the bottom-left of the page is set by hand in `index.html` 
 ## Development
 
 - **Codespaces:** on GitHub, **Code → Codespaces → Create codespace on main**. The `.devcontainer` sets up Node, the Live Preview extension (open `index.html` → "Show Preview"), Claude Code, and Playwright with Chromium. Forwarded port 3000 lets you open the game on a phone.
-- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (art loads, board makeup, first match wins, exact shop odds, scratch-off, tile-open burst, pair cheer, reveal-all, auto next card, old-save conversion, Get Cards limit, game over, leaderboard online and on-device against a fake Supabase (tests never send scores to the real leaderboard), refresh resume, gem burst, win ribbon, empty state (tap to get cards), shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
+- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (art loads, treat pool, board makeup, first match wins, exact shop odds, scratch-off, tile-open burst, pair cheer, reveal-all, auto next card, old-save conversion, Get Cards limit, game over, leaderboard online and on-device against a fake Supabase (tests never send scores to the real leaderboard), refresh resume, gem burst, win ribbon, empty state (tap to get cards), shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
 - **Before every push:** bump the version label, update this README, run `npm test` (see `CLAUDE.md`).
