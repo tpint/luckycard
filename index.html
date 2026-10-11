@@ -143,8 +143,6 @@
   .tile.pair .face { box-shadow: inset 0 0 0 3px #ff8ad0, 0 0 10px #ff8ad0; }
   .tile.win .face { box-shadow: inset 0 0 0 4px var(--gold), 0 0 16px 4px var(--gold); animation: winpulse .6s ease-in-out infinite alternate; }
   .tile.dim { opacity: .45; }
-  /* "no prize" tile */
-  .tile .face .blank { color: #d3cae6; font-size: 60%; }
   /* tiles opened by the reveal-all after a win */
   .tile.rest .face { animation: pop .25s ease-out; }
 
@@ -162,14 +160,6 @@
   .banner .b-title { font-size: 20px; font-weight: 800; color: var(--purple-deep); }
   .banner .b-gems { font-size: 20px; font-weight: 800; color: #1d7fc4; text-shadow: 0 0 10px rgba(127,227,255,.9); }
 
-  /* scratches every remaining tile in one tap */
-  .open-all {
-    position: absolute; left: 50%; bottom: -19px; z-index: 2; transform: translateX(-50%);
-    border: 2px solid #fff; font: inherit; font-weight: 800; font-size: 14px; color: var(--ink); white-space: nowrap;
-    background: var(--gold); border-radius: 999px; padding: 3px 14px; box-shadow: 0 3px 0 #c9a21c; cursor: pointer;
-  }
-  .open-all:active { transform: translateX(-50%) translateY(2px); box-shadow: 0 1px 0 #c9a21c; }
-  .open-all[hidden] { display: none; }
   @media (prefers-reduced-motion: reduce) { .banner.show { animation: fade .3s; } }
   @keyframes pop { 0% { transform: scale(.6); } 70% { transform: scale(1.12); } 100% { transform: scale(1); } }
   @keyframes winpulse { from { transform: scale(1); } to { transform: scale(1.1); } }
@@ -319,7 +309,6 @@
       <div class="board" id="board"></div>
       <div class="empty" id="empty"></div>
       <div class="banner" id="banner"></div>
-      <button class="open-all" id="openAll" hidden>⚡ Open all</button>
     </div>
   </div>
 
@@ -330,7 +319,7 @@
   </div>
 
   <div class="bottom">
-    <div class="version">v2.1 <!-- bump on every push --></div>
+    <div class="version">v2.2 <!-- bump on every push --></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
   </div>
 </div>
@@ -386,6 +375,17 @@ const CONFIG = {
     { name: '2nd Prize', icon: '🍩', img: 'assets/donut.svg', reward: 2 },
     { name: '3rd Prize', icon: '🍬', img: 'assets/candy.svg', reward: 1 },
   ],
+  // Decoy treats fill the tiles the prizes don't. They never win: at most 2 of each go on a card,
+  // so a 16-tile card needs at least 7 of them.
+  decoys: [
+    { icon: '🍪', img: 'assets/cookie.svg' },
+    { icon: '🧁', img: 'assets/cupcake.svg' },
+    { icon: '🍦', img: 'assets/icecream.svg' },
+    { icon: '🍫', img: 'assets/chocolate.svg' },
+    { icon: '🍮', img: 'assets/pudding.svg' },
+    { icon: '🍒', img: 'assets/cherries.svg' },
+    { icon: '🍡', img: 'assets/dango.svg' },
+  ],
   // Art files (see assets/). Swap any path for your own image; set it to '' to fall back to the emoji / drawn version.
   art: { gem: 'assets/gem.svg', cover: 'assets/cover.svg' },
   // Card rarity: drop chance (%), reward multiplier, how many 💎 fly to the counter on a win, and the card-back art
@@ -418,7 +418,7 @@ const newSave = (upgrades = {}) => ({ bag: 0, cards: Array.from({ length: CONFIG
 let save = store.get() || newSave();
 save.upgrades = save.upgrades || {}; // saves from before upgrades existed
 save.refillsUsed = save.refillsUsed || 0; save.runGems = save.runGems || 0; // saves from before the leaderboard
-const BLANK = -1; // a "no prize" tile
+const BLANK = -1; // an empty tile in saves from v1.9-v2.1; filled with decoys on load
 if (save.round && !save.round.board) {
   // Card saved before v1.9, when symbols were handed out in tap order: put what's left on the hidden tiles
   const r = save.round, left = r.sequence.slice(r.step);
@@ -428,6 +428,7 @@ if (save.round && !save.round.board) {
   delete r.sequence; delete r.step; delete r.tiles;
   store.set(save);
 }
+if (save.round && save.round.board.includes(BLANK)) { decoyFill(save.round.board); store.set(save); }
 const refillsLeft = () => Math.max(0, CONFIG.maxRefills - save.refillsUsed);
 const isGameOver = () => !save.round && !save.cards.length && !refillsLeft();
 
@@ -461,7 +462,8 @@ const prizeIcon = i => pic(CONFIG.prizes[i].img, CONFIG.prizes[i].icon);
 const GEM = pic(CONFIG.art.gem, '💎', 'ico gem');
 
 // Every tile gets its symbol when the card starts, like a real scratch card ("100% win rate"):
-// 3 of the winning prize, at most 2 of each other prize (so nothing else can match) and "no prize" tiles.
+// 3 of the winning prize, at most 2 of each other prize (so nothing else can match), and decoy treats on the rest.
+// Symbols 0-2 are the prizes; 3 and up are decoys (CONFIG.decoys).
 function buildBoard(winner) {
   const syms = [winner, winner, winner];
   CONFIG.prizes.forEach((_, i) => {
@@ -470,9 +472,15 @@ function buildBoard(winner) {
     for (let k = 0; k < n; k++) syms.push(i);
   });
   while (syms.length < CONFIG.tiles) syms.push(BLANK);
-  return shuffle(syms);
+  return shuffle(decoyFill(syms));
 }
-const faceHTML = sym => sym === BLANK ? '<span class="blank">✦</span>' : prizeIcon(sym);
+// Puts a decoy on every empty (BLANK) tile, at most 2 of each decoy
+function decoyFill(board) {
+  const P = CONFIG.prizes.length, pool = shuffle(CONFIG.decoys.flatMap((_, d) => [P + d, P + d]));
+  return board.forEach((s, i) => { if (s === BLANK) board[i] = pool.pop(); }), board;
+}
+const isPrize = sym => sym < CONFIG.prizes.length;
+const faceHTML = sym => isPrize(sym) ? prizeIcon(sym) : pic(CONFIG.decoys[sym - CONFIG.prizes.length].img, CONFIG.decoys[sym - CONFIG.prizes.length].icon);
 
 // ---------- Sound + haptics ----------
 let audio;
@@ -598,7 +606,6 @@ function dealCard() {
   clearTimeout(advanceTimer); advanceTimer = null;
   renderStats(); // counters jump to their final values if a win's animation was skipped
   $('banner').classList.remove('show');
-  $('openAll').hidden = true;
   const board = $('board');
   board.innerHTML = '';
   if (!save.round && !save.cards.length) {
@@ -636,7 +643,7 @@ function dealCard() {
       t.dataset.sym = sym;
       t.querySelector('.face').innerHTML = faceHTML(sym);
       t.classList.add('revealed');
-      t.classList.toggle('pair', sym !== BLANK && round.counts[sym] === 2);
+      t.classList.toggle('pair', isPrize(sym) && round.counts[sym] === 2);
     }
     board.appendChild(t);
   }
@@ -644,7 +651,6 @@ function dealCard() {
   if (fresh && (rarity === 'legendary' || rarity === 'immortal')) {
     [523, 659, 784].forEach((f, i) => tone(f, 0.15, 'triangle', i * 0.07, 0.12)); buzz(40);
   }
-  $('openAll').hidden = false;
   renderTray(); renderPrizes();
 }
 
@@ -654,7 +660,7 @@ function reveal(tile) {
   tile.dataset.sym = sym;
   tile.querySelector('.face').innerHTML = faceHTML(sym);
   tile.classList.add('revealed');
-  const n = sym === BLANK ? 0 : ++round.counts[sym];
+  const n = isPrize(sym) ? ++round.counts[sym] : 0; // decoys don't count
   store.set(save);
   buzz(10);
   // The game state updates now; the sounds, burst and match feedback land when the scratch finishes
@@ -782,7 +788,6 @@ let winAt = 0;
 // The reward is paid at once (a refresh can't lose it); the celebration starts after `delay` ms (the scratch)
 function win(sym, delay = 0) {
   round.done = true; winAt = Infinity; // taps on the card are ignored until the celebration has been up a moment
-  $('openAll').hidden = true;
   const p = CONFIG.prizes[sym], gen = cardGen, rarity = round.rarity, board = round.board;
   const reward = rewardFor(sym, rarity);
   const before = save.bag, runBefore = save.runGems;
@@ -841,21 +846,6 @@ function win(sym, delay = 0) {
       next), 500);
   };
   setTimeout(celebrate, delay);
-}
-
-// "Open all": scratches the remaining tiles one after another until the prize is found
-let openingAll = false;
-function openAll() {
-  if (!round || round.done || openingAll) return;
-  openingAll = true; $('openAll').hidden = true;
-  const gen = cardGen;
-  const step = () => {
-    const tile = document.querySelector('#board .tile:not(.revealed)');
-    if (gen !== cardGen || !round || round.done || !tile) { openingAll = false; return; }
-    reveal(tile);
-    setTimeout(step, reducedMotion() ? 60 : 110);
-  };
-  step();
 }
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -981,16 +971,13 @@ function countUp(el, to, fmt, ms = 600, from = 0) {
 
 // ---------- Input ----------
 $('ticket').addEventListener('click', e => {
-  if (e.target.closest('#openAll')) return;
   // Finished card: tap anywhere on it to go straight to the next (not right away, so a double-tap doesn't skip the win)
   if (round && round.done) { if (performance.now() - winAt > 600) dealCard(); return; }
   if (!round) { $('getCards').click(); return; } // no card: the empty card works as the Get Cards button
-  if (openingAll) return;
   const tile = e.target.closest('.tile');
   if (!tile || tile.classList.contains('revealed')) return;
   reveal(tile);
 });
-$('openAll').onclick = openAll;
 $('getCards').onclick = () => {
   if (!refillsLeft()) return;
   save.refillsUsed++;

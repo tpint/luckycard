@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- LuckyCard original art: caramel pudding (decoy) -->
+  <g stroke="#5b3a2e" stroke-width="8" stroke-linejoin="round">
+    <ellipse cx="128" cy="206" rx="98" ry="22" fill="#e9e6f5"/>
+    <path d="M70 200 L90 96 L166 96 L186 200 Q128 216 70 200 Z" fill="#ffe08a"/>
+    <path d="M90 96 L166 96 L172 128 Q160 146 150 128 Q138 150 124 130 Q110 148 98 128 Q90 140 84 128 Z" fill="#b8641e"/>
+    <ellipse cx="128" cy="96" rx="38" ry="10" fill="#c97a2e"/>
+  </g>
+  <path d="M100 160 L96 186" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity=".8"/>
+</svg>

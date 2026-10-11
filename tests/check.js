@@ -133,16 +133,21 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   check(page.errors.length === 0, `no page errors ${page.errors.length ? JSON.stringify(page.errors) : ''}`);
   await page.close();
 
-  // --- Real board: every tile has its symbol from the start; blanks, "So close!", Open all ---
+  // --- Real board: every tile has its symbol from the start; decoys, "So close!", reveal-all ---
+  // Saved with empty tiles (-1) the way v1.9-v2.1 did: they get decoys on load
   const b = Array(16).fill(-1); b[0] = 0; b[5] = 0; b[9] = 0; b[3] = 1; b[7] = 2; b[8] = 2;
   const cpage = await openGame(browser, { ...freshSave([]), round: { rarity: 'rare', winner: 0, board: b, opened: Array(16).fill(false), counts: [0, 0, 0], done: false } });
   const boards = await cpage.evaluate(() => Array.from({ length: 300 }, (_, k) => ({ w: k % 3, b: buildBoard(k % 3) })));
   const count = (b, s) => b.filter(x => x === s).length;
-  check(boards.every(({ w, b }) => b.length === 16 && [0, 1, 2].every(s => s === w ? count(b, s) === 3 : count(b, s) <= 2)),
-    'every new board: 16 tiles, exactly 3 of the winner, at most 2 of each other prize, the rest blank');
+  check(boards.every(({ w, b }) => b.length === 16 && b.every(s => s >= 0 && s < 10) && [...new Set(b)].every(s => s === w ? count(b, s) === 3 : count(b, s) <= 2)),
+    'every new board: 16 filled tiles, exactly 3 of the winner, at most 2 of every other prize or decoy');
   await cpage.locator('.tile').nth(15).click();
   await cpage.waitForTimeout(150);
-  check(await cpage.$('.tile:nth-child(16) .face .blank') !== null && await cpage.locator('.fx.cheer').count() === 0, 'a "no prize" tile shows a blank');
+  const loaded = await cpage.evaluate(() => JSON.parse(localStorage.getItem('luckycard')).round.board);
+  check(!loaded.includes(-1) && [0, 5, 9].every(i => loaded[i] === 0) && loaded.filter(s => s >= 3).length === 10, 'empty tiles from an older save get decoys, prizes stay put');
+  await cpage.waitForTimeout(450);
+  const decoyAlt = await cpage.getAttribute('.tile:nth-child(16) .face img', 'alt');
+  check(['🍪', '🧁', '🍦', '🍫', '🍮', '🍒', '🍡'].includes(decoyAlt) && await cpage.locator('.fx.cheer').count() === 0, `a decoy tile shows a treat and doesn't count (${decoyAlt})`);
   await cpage.locator('.tile').nth(0).click();
   await cpage.waitForTimeout(450);
   check(await cpage.locator('.fx.cheer').count() === 0, 'first copy of a symbol: no cheer');
@@ -152,12 +157,12 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   check(await cpage.locator('.fx.cheer', { hasText: 'So close!' }).count() === 1, 'a pair shows the "So close!" cheer (tiles open in any order)');
   await shot(cpage, '2b-so-close');
   await cpage.waitForTimeout(800);
-  await cpage.click('#openAll');
+  await cpage.locator('.tile').nth(9).click();
   await cpage.waitForSelector('.tile.win', { timeout: 5000 });
   const won = await cpage.evaluate(() => [...document.querySelectorAll('.tile.win')].map(t => [...t.parentNode.children].indexOf(t)).join());
-  check(won === '0,5,9', `Open all scratches the card until the prize is found (wins on tiles ${won})`);
+  check(won === '0,5,9', `the 3rd match wins (tiles ${won})`);
   await cpage.waitForTimeout(1200);
-  check(await cpage.locator('.tile.revealed').count() === 16, 'Open all: the rest of the card reveals itself');
+  check(await cpage.locator('.tile.revealed').count() === 16 && !(await cpage.$('#openAll')), 'the rest of the card reveals itself; no Open all button');
   await shot(cpage, '2c-reveal-all');
   check(cpage.errors.length === 0, 'real board: no page errors');
   await cpage.close();
