@@ -50,7 +50,8 @@ async function fakeSupabase(page) {
 // Taps unopened tiles until this card's win shows. Clicks the tile found right now (not a locator that would
 // wait and land on the next card once this one is done).
 const playUntilWin = async page => {
-  while (!(await page.$('.tile.win'))) {
+  for (let tries = 0; !(await page.$('.tile.win')); tries++) {
+    if (tries > 60) throw new Error('playUntilWin: no win after 60 taps');
     const tile = await page.$('.tile:not(.revealed)');
     if (tile) await tile.click({ timeout: 1000 }).catch(() => {}); else await page.waitForTimeout(50);
   }
@@ -145,6 +146,7 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   check(avg[0] < avg[1] && avg[1] < avg[2] && avg[0] > 3 && avg[2] < 9, `typical mix is about 4 cake / 5 donut / 7 candy (${avg.map(a => a.toFixed(1)).join(' / ')})`);
   const odds = await cpage.evaluate(() => [matchOdds([10, 30, 60]), matchOdds([25, 45, 30])].map(o => o.map(x => Math.round(x * 1000) / 10)));
   check(odds[0].join() === '11.4,28.5,60' && Math.abs(odds[1].reduce((a, b) => a + b) - 100) < 0.2, `shop odds are exact first-match chances (${odds[0].join(' / ')}%)`);
+  check((await cpage.evaluate(() => JSON.parse(localStorage.getItem('luckycard')).round.items.join())) === '0,1,2', 'card saved before the treat pool keeps cake / donut / candy');
   await cpage.locator('.tile').nth(15).click();
   await cpage.waitForTimeout(450);
   await cpage.locator('.tile').nth(0).click();
@@ -166,6 +168,28 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   await shot(cpage, '2c-reveal-all');
   check(cpage.errors.length === 0, 'real board: no page errors');
   await cpage.close();
+
+  // --- Treat pool: each card picks 3 different treats at random for its 1st / 2nd / 3rd prize ---
+  const tpage = await openGame(browser, freshSave(Array(41).fill('rare')));
+  const decks = [];
+  for (let k = 0; k < 40; k++) {
+    decks.push(await tpage.evaluate(() => {
+      const r = JSON.parse(localStorage.getItem('luckycard')).round;
+      const shown = [...document.querySelectorAll('.prize')].map(p => p.querySelector('.slots img').alt);
+      return { items: r.items, shown, icons: r.items.map(k => CONFIG.treats[k].icon) };
+    }));
+    await tpage.evaluate(() => { save.round = null; store.set(save); dealCard(); });
+  }
+  check(decks.every(d => d.items.length === 3 && new Set(d.items).size === 3 && d.items.every(k => k >= 0 && k < 10)), 'every card has 3 different treats from the pool of 10');
+  check(new Set(decks.flatMap(d => d.items)).size >= 8 && new Set(decks.map(d => d.items[0])).size >= 5, `cards vary, and any treat can be 1st prize (${new Set(decks.map(d => d.items[0])).size} different 1st prizes in 40 cards)`);
+  check(decks.every(d => d.shown.join() === d.icons.join()), 'prize boxes show the card\'s own treats');
+  await playUntilWin(tpage);
+  const tileAlts = await tpage.evaluate(() => [...document.querySelectorAll('.tile.revealed .face img')].map(i => i.alt));
+  const own = await tpage.evaluate(() => round.items.map(k => CONFIG.treats[k].icon));
+  check(tileAlts.length > 0 && tileAlts.every(a => own.includes(a)), 'tiles show only the card\'s 3 treats');
+  await shot(tpage, '2d-treat-pool');
+  check(tpage.errors.length === 0, 'treat pool: no page errors');
+  await tpage.close();
 
   // --- A card saved by an older version (symbols handed out in tap order) still plays ---
   const old = { rarity: 'epic', winner: 1, sequence: [2, 1, 1, 0, 1], step: 2, counts: [0, 2, 1], tiles: [2, 1, ...Array(14).fill(null)], done: false };
