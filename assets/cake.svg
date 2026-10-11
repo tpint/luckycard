@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- LuckyCard original art: strawberry cake slice -->
+  <g stroke="#5b3a2e" stroke-width="8" stroke-linejoin="round" stroke-linecap="round">
+    <!-- side of the slice -->
+    <path d="M40 150 L180 96 L216 120 L216 196 L40 206 Z" fill="#ffe2b8"/>
+    <!-- sponge layers -->
+    <path d="M40 206 L40 150 L76 172 L76 228 Z" fill="#ffcf8a"/>
+    <path d="M76 172 L216 120 L216 196 L76 228 Z" fill="#ffd99e"/>
+    <path d="M76 198 L216 158" fill="none" stroke="#ff7aa8" stroke-width="12"/>
+    <!-- cream top -->
+    <path d="M40 150 L180 96 L216 120 L76 172 Z" fill="#fff6ef"/>
+    <path d="M76 172 Q96 186 112 168 Q130 182 146 160 Q164 172 180 150 Q198 160 216 140 L216 120 Z" fill="#fff6ef"/>
+    <!-- strawberry -->
+    <path d="M150 104 C126 100 118 70 136 56 C150 46 172 50 178 66 C186 88 172 108 150 104 Z" fill="#ff4f6d"/>
+    <path d="M140 58 L150 44 L160 56 L170 48 L168 64" fill="#5fcf6a"/>
+  </g>
+  <g fill="#fff" opacity=".85">
+    <circle cx="146" cy="74" r="3.5"/><circle cx="160" cy="68" r="3.5"/><circle cx="156" cy="86" r="3.5"/><circle cx="142" cy="90" r="3"/><circle cx="168" cy="84" r="3"/>
+    <ellipse cx="96" cy="150" rx="18" ry="6" transform="rotate(-20 96 150)"/>
+  </g>
+</svg>

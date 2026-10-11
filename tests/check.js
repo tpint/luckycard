@@ -38,6 +38,11 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   const page = await openGame(browser, freshSave(['immortal', 'rare']));
   await shot(page, '1-start');
   check(await page.$('.card.current') !== null, 'current card is highlighted in the tray');
+  const art = await page.evaluate(() => {
+    const imgs = [...document.querySelectorAll('img.ico')];
+    return { n: imgs.length, broken: imgs.filter(i => !i.complete || !i.naturalWidth).map(i => i.src), cards: [...document.querySelectorAll('.card.art')].length };
+  });
+  check(art.n > 0 && art.broken.length === 0 && art.cards === 2, `art images load (${art.n} icons, ${art.cards} card backs${art.broken.length ? ', broken: ' + art.broken : ''})`);
 
   const tiles = page.locator('.tile:not(.revealed)');
   await tiles.nth(0).click();
@@ -63,8 +68,8 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   await page.waitForSelector('#overlay.show', { timeout: 5000 });
   await page.waitForTimeout(800);
   const bag = +(await page.textContent('#bagCount'));
-  const popup = await page.textContent('#popReward');
-  check(bag > 0 && popup === `💎 × ${bag}`, `counter and popup agree (${bag}, "${popup}")`);
+  const popup = await page.textContent('#popRewardN');
+  check(bag > 0 && +popup === bag, `counter and popup agree (${bag}, "${popup}")`);
   await shot(page, '4-popup');
 
   await page.click('#popBtn'); await page.waitForTimeout(300);
