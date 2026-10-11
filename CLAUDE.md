@@ -6,7 +6,7 @@ Scratch-card game prototype: all HTML, CSS and JS is in `index.html`; original S
 
 - Balance values live in the `CONFIG` object at the top of the `<script>`.
 - Progress is saved in `localStorage` under the key `luckycard`. When adding fields to the save, keep old saves loading (default missing fields after `store.get()`).
-- Leaderboard: Supabase REST when `CONFIG.leaderboard` has url/key, else `localStorage` key `luckycard-scores`. Player names come from other players: always escape them.
+- Leaderboard: Supabase REST when `CONFIG.leaderboard` has url/key (set to the live project; the key is the public publishable key), else `localStorage` key `luckycard-scores`. Tests route all `/rest/v1/` calls to an in-memory fake (`fakeSupabase` in `tests/check.js`): never let tests write to the real leaderboard. Player names come from other players: always escape them.
 - Respect `prefers-reduced-motion`: give a gentler effect rather than none.
 
 ## Testing

@@ -290,7 +290,7 @@
   </div>
 
   <div class="bottom">
-    <div class="version">v1.4 <!-- bump on every push --></div>
+    <div class="version">v1.5 <!-- bump on every push --></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
   </div>
 </div>
@@ -341,8 +341,9 @@ const CONFIG = {
   startCards: 3,
   cardsPerRefill: 3,      // "Get Cards" is free in the prototype
   maxRefills: 2,          // how many times "Get Cards" can be used per game; the game ends when cards and refills run out
-  // Online leaderboard (Supabase, see README). Leave url/key empty to keep scores on this device only.
-  leaderboard: { url: '', key: '', size: 10 },
+  // Online leaderboard (Supabase, see README). The publishable key is meant to be public; never put the secret key here.
+  // Set url/key to '' to keep scores on this device only.
+  leaderboard: { url: 'https://bftlvlwqueaqjjcgbfbb.supabase.co', key: 'sb_publishable_kn-tZx3OIFjhKg6JKOfTzw_uM6RUm51', size: 10 },
   // How many of each losing pattern show up before the win (more 2s = more near-misses)
   loserCountWeights: [20, 35, 45], // weights for 0, 1, 2 copies
   // Chance of winning each prize (1st, 2nd, 3rd) on any card
