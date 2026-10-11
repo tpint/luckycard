@@ -179,6 +179,9 @@
     background: rgba(244,239,224,.92); border-radius: 8px; font-weight: 700; font-size: 18px; padding: 20px;
   }
   .ticket.no-card .empty { display: grid; }
+  .ticket.no-card:not(.over) { cursor: pointer; }
+  .empty-cta { display: inline-block; margin-top: 8px; background: #fff; border-radius: 999px; padding: 4px 16px; box-shadow: 0 3px 0 #9c86c4; font-size: 17px; }
+  .ticket.no-card:not(.over):active .empty-cta { transform: translateY(2px); box-shadow: 0 1px 0 #9c86c4; }
 
   /* tray */
   .tray { display: flex; align-items: center; gap: 10px; }
@@ -314,7 +317,7 @@
     <div class="ticket" id="ticket" data-type="">
       <div class="rarity" id="rarity"></div>
       <div class="board" id="board"></div>
-      <div class="empty" id="empty">No cards left.<br>Tap “Get Cards”!</div>
+      <div class="empty" id="empty"></div>
       <div class="banner" id="banner"></div>
       <button class="open-all" id="openAll" hidden>⚡ Open all</button>
     </div>
@@ -327,7 +330,7 @@
   </div>
 
   <div class="bottom">
-    <div class="version">v2.0 <!-- bump on every push --></div>
+    <div class="version">v2.1 <!-- bump on every push --></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
   </div>
 </div>
@@ -605,7 +608,8 @@ function dealCard() {
     requestAnimationFrame(() => board.querySelectorAll('canvas').forEach(drawCover));
     $('ticket').classList.add('no-card');
     $('ticket').dataset.type = '';
-    $('empty').innerHTML = isGameOver() ? `Game over!<br>${GEM} ` + save.runGems + ' this game' : 'No cards left.<br>Tap “Get Cards”!';
+    $('ticket').classList.toggle('over', isGameOver());
+    $('empty').innerHTML = '<div>' + (isGameOver() ? `Game over!<br>${GEM} ` + save.runGems + ' this game' : 'No cards left.<br><span class="empty-cta">🃏 Tap here to get more</span>') + '</div>';
     renderTray(); renderPrizes();
     if (isGameOver()) showGameOver();
     return;
@@ -980,7 +984,8 @@ $('ticket').addEventListener('click', e => {
   if (e.target.closest('#openAll')) return;
   // Finished card: tap anywhere on it to go straight to the next (not right away, so a double-tap doesn't skip the win)
   if (round && round.done) { if (performance.now() - winAt > 600) dealCard(); return; }
-  if (!round || openingAll) return;
+  if (!round) { $('getCards').click(); return; } // no card: the empty card works as the Get Cards button
+  if (openingAll) return;
   const tile = e.target.closest('.tile');
   if (!tile || tile.classList.contains('revealed')) return;
   reveal(tile);

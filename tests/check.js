@@ -123,6 +123,9 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   const height = (await page.locator('#ticket').boundingBox()).height;
   check(height > 250, `empty ticket keeps its size (${Math.round(height)}px)`);
   await shot(page, '5-empty');
+  await page.click('#ticket'); await page.waitForTimeout(400);
+  check(await page.textContent('#refillsLeft') === '1 left' && !!(await page.$('#ticket:not(.no-card) .tile canvas')) && await page.locator('.card').count() === 3,
+    'with no cards, tapping the card area works as Get Cards');
 
   await page.click('#shopBtn'); await page.waitForTimeout(300);
   check(await page.locator('.upgrade').count() === 3, 'shop shows 3 upgrades');

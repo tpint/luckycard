@@ -12,7 +12,7 @@ Scratch-card game prototype: all HTML, CSS and JS is in `index.html`; original S
 
 ## Testing
 
-`npm test` runs `tests/check.js`: plays the game in headless Chromium at phone size, checks the main flows (art loads, board makeup, scratch-off, tile-open burst, pair cheer, Open all, reveal-all, auto next card, old-save conversion, Get Cards limit, game over, leaderboard on-device and online against a fake Supabase, refresh resume, gem burst, win ribbon, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Run it after gameplay/UI changes and look at the screenshots. Extend it when adding features.
+`npm test` runs `tests/check.js`: plays the game in headless Chromium at phone size, checks the main flows (art loads, board makeup, scratch-off, tile-open burst, pair cheer, Open all, reveal-all, auto next card, old-save conversion, Get Cards limit, game over, leaderboard on-device and online against a fake Supabase, refresh resume, gem burst, win ribbon, empty state (tap to get cards), shop, reduced motion) and saves screenshots to `tests/screenshots/`. Run it after gameplay/UI changes and look at the screenshots. Extend it when adding features.
 
 ## Every push
 

@@ -22,7 +22,7 @@ Progress (💎 total, remaining cards, Get Cards left, the card in play with its
   | Legendary | 20%       | ×5         |
   | Immortal  | 10%       | ×20        |
 
-- You start with 3 cards; **Get Cards** adds 3 more (free in the prototype) and can be used **2 times per game** (the button shows how many are left).
+- You start with 3 cards; **Get Cards** adds 3 more (free in the prototype) and can be used **2 times per game** (the button shows how many are left). When you're out of cards, tapping the empty card does the same as Get Cards.
 - **Game over:** when you're out of cards and Get Cards is used up, the game ends. Enter your name to put the 💎 you earned this game on the 🏆 leaderboard (spending 💎 on upgrades doesn't lower your score). **New game** keeps your 💎 and upgrades and resets cards, Get Cards and the score.
 - **💎 counters:** the header shows all your 💎 (kept between games, spent on upgrades); **This game** next to the slogan shows what you've earned in the current game, which is your leaderboard score.
 - **🏆 Leaderboard** (button next to Get Cards): top 10 scores, with your latest score highlighted and its rank shown even if it's outside the top 10.
@@ -102,5 +102,5 @@ The version shown at the bottom-left of the page is set by hand in `index.html` 
 ## Development
 
 - **Codespaces:** on GitHub, **Code → Codespaces → Create codespace on main**. The `.devcontainer` sets up Node, the Live Preview extension (open `index.html` → "Show Preview"), Claude Code, and Playwright with Chromium. Forwarded port 3000 lets you open the game on a phone.
-- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (art loads, board makeup, scratch-off, tile-open burst, pair cheer, Open all, reveal-all, auto next card, old-save conversion, Get Cards limit, game over, leaderboard online and on-device against a fake Supabase (tests never send scores to the real leaderboard), refresh resume, gem burst, win ribbon, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
+- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (art loads, board makeup, scratch-off, tile-open burst, pair cheer, Open all, reveal-all, auto next card, old-save conversion, Get Cards limit, game over, leaderboard online and on-device against a fake Supabase (tests never send scores to the real leaderboard), refresh resume, gem burst, win ribbon, empty state (tap to get cards), shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
 - **Before every push:** bump the version label, update this README, run `npm test` (see `CLAUDE.md`).
