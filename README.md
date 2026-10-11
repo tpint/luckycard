@@ -31,6 +31,12 @@ Progress (💎 total, remaining cards, Get Cards left, the card in play with its
 
 Tap **⬆ Upgrades** (top right) to spend 💎. Each level costs more than the last.
 
+| Upgrade | 💎 cost per level | Total to max |
+|---|---|---|
+| 🍀 Lucky Draw | 10 · 16 · 26 · 41 · 66 · 105 · 168 · 268 · 429 · 687 | 1816 (was 3632) |
+| 🎯 Top Prize Chance | 13 · 21 · 36 · 61 · 104 | 235 (was 472) |
+| 💎 Bigger Prizes | 20 · 36 · 65 · 117 · 210 | 448 (was 895) |
+
 | Upgrade          | Effect per level                                   | Max | At max level                   |
 |------------------|----------------------------------------------------|-----|--------------------------------|
 | 🍀 Lucky Draw    | Shifts card rarity odds away from Rare             | 10  | Rare 25 / Epic 31 / Legendary 25 / Immortal 19% |
