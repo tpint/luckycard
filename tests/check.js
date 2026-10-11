@@ -47,8 +47,13 @@ async function fakeSupabase(page) {
     return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify([...db].sort((a, b) => b.score - a.score || a.created_at - b.created_at).slice(0, limit)) });
   });
 }
+// Taps unopened tiles until this card's win shows. Clicks the tile found right now (not a locator that would
+// wait and land on the next card once this one is done).
 const playUntilWin = async page => {
-  while (!(await page.$('.tile.win'))) await page.locator('.tile:not(.revealed)').first().click();
+  while (!(await page.$('.tile.win'))) {
+    const tile = await page.$('.tile:not(.revealed)');
+    if (tile) await tile.click({ timeout: 1000 }).catch(() => {}); else await page.waitForTimeout(50);
+  }
 };
 // After a win the next card deals itself (or the empty / game over state shows)
 const waitNextCard = p => p.waitForFunction(() => !document.querySelector('.tile.win'), null, { timeout: 8000 });
@@ -71,8 +76,15 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
 
   const tiles = page.locator('.tile:not(.revealed)');
   await tiles.nth(0).click();
-  await page.waitForTimeout(120);
+  await page.waitForTimeout(150);
+  // Mid-scratch: the cover is still showing (being erased in strokes) and flakes are falling
+  const mid = await page.evaluate(() => ({ scratching: document.querySelectorAll('.tile.scratching').length, flakes: document.querySelectorAll('.fx.flake').length,
+    coverShown: getComputedStyle(document.querySelector('.tile.scratching canvas') || document.body).opacity === '1' }));
+  check(mid.scratching === 1 && mid.coverShown && mid.flakes > 0, `tapping a tile scratches the foil off, with flakes (${JSON.stringify(mid)})`);
+  await shot(page, '1a-scratching');
+  await page.waitForTimeout(250);
   const fx = await page.evaluate(() => ({ shards: document.querySelectorAll('.fx.shard').length, sparks: document.querySelectorAll('.fx.spark').length, ring: document.querySelectorAll('.fx.ring').length }));
+  check(!(await page.$('.tile.scratching')), 'scratch finishes, then the prize pops');
   check(fx.shards > 0 && fx.sparks > 0 && fx.ring === 1, `opening a tile bursts shards, sparkles and a ring (${JSON.stringify(fx)})`);
   check(await page.$('.tile.opened') !== null, 'opened tile bounces in');
   await shot(page, '1b-tile-open-burst');
@@ -129,11 +141,11 @@ const freshSave = cards => ({ bag: 0, cards, played: 0, wins: [0, 0, 0], upgrade
   await cpage.waitForTimeout(150);
   check(await cpage.$('.tile:nth-child(16) .face .blank') !== null && await cpage.locator('.fx.cheer').count() === 0, 'a "no prize" tile shows a blank');
   await cpage.locator('.tile').nth(0).click();
-  await cpage.waitForTimeout(150);
+  await cpage.waitForTimeout(450);
   check(await cpage.locator('.fx.cheer').count() === 0, 'first copy of a symbol: no cheer');
   await cpage.waitForTimeout(800);
   await cpage.locator('.tile').nth(5).click();
-  await cpage.waitForTimeout(250);
+  await cpage.waitForTimeout(450); // cheer lands after the scratch
   check(await cpage.locator('.fx.cheer', { hasText: 'So close!' }).count() === 1, 'a pair shows the "So close!" cheer (tiles open in any order)');
   await shot(cpage, '2b-so-close');
   await cpage.waitForTimeout(800);
