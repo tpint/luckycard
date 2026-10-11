@@ -162,6 +162,8 @@
     cursor: pointer;
   }
   .get:active { transform: translateY(2px); box-shadow: 0 1px 0 #9c86c4; }
+  .get small { display: block; font-size: 11px; line-height: 1; color: #8a7aa8; margin-top: -2px; }
+  .get:disabled { background: #e3dcef; color: #9c8fb5; box-shadow: 0 3px 0 #b9acd2; cursor: default; transform: none; }
 
   .bottom { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #5b4580; padding: 0 4px; }
   .stats { text-align: right; line-height: 1.3; }
@@ -222,6 +224,36 @@
   .popup .upgrade button:disabled { background: #c9bfd9; box-shadow: 0 4px 0 #a99cbf; cursor: default; }
   .shop-note { font-size: 12px; color: #8a7aa8; margin: 2px 0 12px; }
   #shopClose { display: block; margin: 0 auto; }
+
+  /* leaderboard + game over */
+  .lb-btn {
+    flex: none; border: none; font: inherit; font-size: 20px; line-height: 1; width: 42px; height: 42px; border-radius: 50%;
+    background: #fff; box-shadow: 0 3px 0 #9c86c4; cursor: pointer; padding: 0;
+  }
+  .lb-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #9c86c4; }
+  .popup.board-pop { width: min(360px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; padding: 18px; }
+  .popup.board-pop h2 { font-size: 28px; }
+  .popup .earned { font-size: 18px; margin: 2px 0 10px; }
+  .popup .earned b { color: #1d7fc4; font-size: 24px; }
+  #scoreForm { display: flex; gap: 6px; margin-bottom: 10px; }
+  #scoreForm[hidden] { display: none; }
+  #nameIn { flex: 1; min-width: 0; font: inherit; font-size: 17px; font-weight: 700; color: var(--ink); border: 2px solid #d9d0ef; border-radius: 999px; padding: 6px 14px; user-select: text; -webkit-user-select: text; }
+  #nameIn:focus { outline: none; border-color: var(--purple); }
+  #scoreForm button { font-size: 16px; padding: 8px 14px; white-space: nowrap; }
+  .ranks { list-style: none; margin: 0 0 6px; padding: 0; text-align: left; }
+  .ranks li { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 10px; font-weight: 700; font-size: 16px; }
+  .ranks li:nth-child(odd) { background: #f6f2fc; }
+  .ranks .pos { width: 30px; color: #8a7aa8; font-weight: 800; }
+  .ranks li:nth-child(1) .pos { color: #e0a800; }
+  .ranks .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ranks .sc { color: #1d7fc4; white-space: nowrap; }
+  .ranks li.me { background: #fff3c4; box-shadow: inset 0 0 0 2px var(--gold); }
+  .ranks li.gap { justify-content: center; color: #b3a8c8; padding: 0; background: none; }
+  .lb-msg { margin: 8px 0; font-size: 16px; color: #5b4580; }
+  .popup .lb-src { font-size: 12px; color: #8a7aa8; margin: 0 0 10px; font-weight: 500; }
+  .over-note { font-size: 13px; color: #5b4580; background: #f3edfc; border-radius: 10px; padding: 6px 10px; margin-bottom: 12px; }
+  .over-btns { display: flex; gap: 8px; justify-content: center; }
+  .popup button.ghost { background: #fff; color: var(--purple-deep); box-shadow: 0 4px 0 #d9d0ef, inset 0 0 0 2px #d9d0ef; }
 </style>
 </head>
 <body>
@@ -241,17 +273,18 @@
     <div class="ticket" id="ticket" data-type="">
       <div class="rarity" id="rarity"></div>
       <div class="board" id="board"></div>
-      <div class="empty">No cards left.<br>Tap “Get Cards”!</div>
+      <div class="empty" id="empty">No cards left.<br>Tap “Get Cards”!</div>
     </div>
   </div>
 
   <div class="tray">
     <div class="cards" id="cards"></div>
-    <button class="get" id="getCards">🃏 Get Cards</button>
+    <button class="lb-btn" id="lbBtn" title="Leaderboard" aria-label="Leaderboard">🏆</button>
+    <button class="get" id="getCards">🃏 Get Cards<small id="refillsLeft"></small></button>
   </div>
 
   <div class="bottom">
-    <div class="version">v1.2 <!-- bump on every push --></div>
+    <div class="version">v1.3 <!-- bump on every push --></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
   </div>
 </div>
@@ -263,6 +296,26 @@
     <div class="big" id="popIcon">🍰</div>
     <p id="popReward">💎 × 3</p>
     <button id="popBtn">Next card</button>
+  </div>
+</div>
+
+<!-- before #shop in the page, so the shop opens on top of it -->
+<div class="overlay" id="over">
+  <div class="popup board-pop">
+    <h2>Out of cards!</h2>
+    <p class="earned">You earned <b>💎 <span id="runGems">0</span></b> this game</p>
+    <form id="scoreForm"><input id="nameIn" maxlength="16" placeholder="Your name" autocomplete="nickname"><button id="submitScore">Submit</button></form>
+    <div id="overBoard"></div>
+    <div class="over-note">⬆ Upgrades carry over to your next game, 💎 don't, so spend them first!</div>
+    <div class="over-btns"><button class="ghost" id="overShop">⬆ Upgrades</button><button id="newGame">New game</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="lb">
+  <div class="popup board-pop">
+    <h2>🏆 Leaderboard</h2>
+    <div id="lbBoard"></div>
+    <button id="lbClose">Close</button>
   </div>
 </div>
 
@@ -281,6 +334,9 @@ const CONFIG = {
   tiles: 16,              // 4x4 grid
   startCards: 3,
   cardsPerRefill: 3,      // "Get Cards" is free in the prototype
+  maxRefills: 2,          // how many times "Get Cards" can be used per game; the game ends when cards and refills run out
+  // Online leaderboard (Supabase, see README). Leave url/key empty to keep scores on this device only.
+  leaderboard: { url: '', key: '', size: 10 },
   // How many of each losing pattern show up before the win (more 2s = more near-misses)
   loserCountWeights: [20, 35, 45], // weights for 0, 1, 2 copies
   // Chance of winning each prize (1st, 2nd, 3rd) on any card
@@ -315,9 +371,13 @@ const store = {
   get() { try { return JSON.parse(localStorage.getItem(SAVE_KEY)) } catch { return null } },
   set(v) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(v)) } catch {} },
 };
-const newSave = () => ({ bag: 0, cards: Array.from({ length: CONFIG.startCards }, () => randomRarity(0)), played: 0, wins: [0, 0, 0], upgrades: {} });
+// runGems: 💎 earned this game (the leaderboard score; spending on upgrades doesn't lower it)
+const newSave = (upgrades = {}) => ({ bag: 0, cards: Array.from({ length: CONFIG.startCards }, () => randomRarity(upgrades.luck || 0)), played: 0, wins: [0, 0, 0], upgrades, refillsUsed: 0, runGems: 0, scoreSent: false });
 let save = store.get() || newSave();
 save.upgrades = save.upgrades || {}; // saves from before upgrades existed
+save.refillsUsed = save.refillsUsed || 0; save.runGems = save.runGems || 0; // saves from before the leaderboard
+const refillsLeft = () => Math.max(0, CONFIG.maxRefills - save.refillsUsed);
+const isGameOver = () => !save.round && !save.cards.length && !refillsLeft();
 
 let round = null; // the card in play (same object as save.round until it is won): { rarity, winner, sequence, step, counts, tiles, done }
 
@@ -408,6 +468,8 @@ function renderTray() {
   const card = (r, now) => `<div class="card ${r}${now ? ' current' : ''}" title="${CONFIG.rarities[r].label}${now ? ' (playing now)' : ''}">✦${now ? '<span class="now">NOW</span>' : ''}</div>`;
   const cards = (round ? [card(round.rarity, true)] : []).concat(save.cards.map(r => card(r)));
   $('cards').innerHTML = cards.length ? cards.join('') : '<span class="none">No cards</span>';
+  $('getCards').disabled = !refillsLeft();
+  $('refillsLeft').textContent = `${refillsLeft()} left`;
 }
 const pcts = ws => { const sum = ws.reduce((a, b) => a + b, 0); return ws.map(w => Math.round(w / sum * 100)); };
 // "now → next" for each value, or just "now" at max level
@@ -478,7 +540,9 @@ function dealCard() {
     requestAnimationFrame(() => board.querySelectorAll('canvas').forEach(drawCover));
     $('ticket').classList.add('no-card');
     $('ticket').dataset.type = '';
+    $('empty').innerHTML = isGameOver() ? 'Game over!<br>💎 ' + save.runGems + ' this game' : 'No cards left.<br>Tap “Get Cards”!';
     renderTray(); renderPrizes();
+    if (isGameOver()) showGameOver();
     return;
   }
   $('ticket').classList.remove('no-card');
@@ -602,7 +666,7 @@ function win(sym) {
   updatePrizeSlots();
   [660, 830, 990, 1320].forEach((f, i) => tone(f, 0.18, 'triangle', i * 0.09, 0.18)); buzz([30, 40, 60]);
   const before = save.bag;
-  save.bag += reward; save.played++; save.wins[sym]++;
+  save.bag += reward; save.runGems += reward; save.played++; save.wins[sym]++;
   save.round = null; // reward is paid, so a refresh now moves on to the next card
   store.set(save);
   const showPopup = () => {
@@ -610,7 +674,7 @@ function win(sym) {
     $('popRarity').textContent = `${CONFIG.rarities[round.rarity].label} card`;
     $('popTitle').textContent = p.name + '!';
     $('popIcon').textContent = p.icon.repeat(3);
-    $('popBtn').textContent = save.cards.length ? 'Next card' : 'OK';
+    $('popBtn').textContent = save.cards.length ? 'Next card' : refillsLeft() ? 'OK' : 'See results';
     $('overlay').classList.add('show');
     countUp($('popReward'), reward, n => `💎 × ${n}`);
   };
@@ -657,6 +721,90 @@ function gemBurst(fromEls, count, onArrive, onDone) {
   }
 }
 
+// ---------- Leaderboard ----------
+// Online: a Supabase "scores" table read and written over its REST API (setup in README).
+// Without url/key it falls back to a list kept in this browser, so the game always has a leaderboard.
+const LOCAL_SCORES = 'luckycard-scores';
+const online = () => !!(CONFIG.leaderboard.url && CONFIG.leaderboard.key);
+function supabase(path, opts = {}) {
+  const { url, key } = CONFIG.leaderboard;
+  return fetch(url.replace(/\/$/, '') + '/rest/v1/' + path, {
+    ...opts, headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', ...opts.headers },
+  }).then(r => { if (!r.ok) throw new Error('leaderboard ' + r.status); return r; });
+}
+const localScores = () => { try { return JSON.parse(localStorage.getItem(LOCAL_SCORES)) || [] } catch { return [] } };
+const byScore = (a, b) => b.score - a.score || a.at - b.at; // ties: whoever got there first ranks higher
+const scores = {
+  async add(name, score) {
+    if (online()) {
+      const r = await supabase('scores', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ name, score }) });
+      return (await r.json())[0].id;
+    }
+    const id = Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+    const list = localScores().concat({ id, name, score, at: Date.now() }).sort(byScore).slice(0, 100);
+    try { localStorage.setItem(LOCAL_SCORES, JSON.stringify(list)) } catch {}
+    return id;
+  },
+  async top() {
+    if (online()) return (await supabase(`scores?select=id,name,score&order=score.desc,created_at.asc&limit=${CONFIG.leaderboard.size}`)).json();
+    return localScores().sort(byScore).slice(0, CONFIG.leaderboard.size);
+  },
+  // 1 + how many scores beat this one ('?' if the server didn't say)
+  async rank(score) {
+    if (online()) {
+      const r = await supabase(`scores?select=id&score=gt.${score}`, { method: 'HEAD', headers: { Prefer: 'count=exact' } });
+      const total = (r.headers.get('content-range') || '').split('/')[1];
+      return total ? 1 + +total : '?';
+    }
+    return 1 + localScores().filter(s => s.score > score).length;
+  },
+};
+const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`); // names come from other players
+async function showBoard(el, mine = save.lastScore) {
+  el.innerHTML = '<p class="lb-msg">Loading…</p>';
+  const row = (pos, s, me) => `<li class="${me ? 'me' : ''}"><span class="pos">#${pos}</span><span class="nm">${esc(s.name)}</span><span class="sc">💎 ${s.score}</span></li>`;
+  try {
+    const top = await scores.top();
+    let rows = top.map((s, i) => row(i + 1, s, mine && s.id === mine.id));
+    // Your latest score is still shown, with its rank, when it isn't in the top list
+    if (mine && !top.some(s => s.id === mine.id)) rows.push('<li class="gap">⋯</li>', row(await scores.rank(mine.score), mine, true));
+    el.innerHTML = (top.length ? `<ol class="ranks">${rows.join('')}</ol>` : '<p class="lb-msg">No scores yet. Finish a game to be first!</p>')
+      + `<p class="lb-src">${online() ? 'All players' : 'Scores on this device'}</p>`;
+  } catch {
+    el.innerHTML = '<p class="lb-msg">Couldn’t load the leaderboard. Check your connection.</p>';
+  }
+}
+function showGameOver() {
+  $('runGems').textContent = save.runGems;
+  $('nameIn').value = save.playerName || '';
+  $('scoreForm').hidden = !!save.scoreSent;
+  if (save.scoreSent) showBoard($('overBoard')); else $('overBoard').innerHTML = '';
+  $('over').classList.add('show');
+}
+async function submitScore(e) {
+  e.preventDefault();
+  const name = $('nameIn').value.trim().slice(0, 16) || 'Player';
+  $('submitScore').disabled = true;
+  try {
+    const id = await scores.add(name, save.runGems);
+    save.playerName = name; save.scoreSent = true; save.lastScore = { id, name, score: save.runGems };
+    store.set(save);
+    [784, 988, 1175].forEach((f, i) => tone(f, 0.12, 'triangle', i * 0.08, 0.12));
+    showGameOver();
+  } catch {
+    $('overBoard').innerHTML = '<p class="lb-msg">Couldn’t send your score. Check your connection and try again.</p>';
+  } finally {
+    $('submitScore').disabled = false;
+  }
+}
+// Upgrades and your name stay; 💎, cards, refills and the score reset
+function newGame() {
+  save = { ...newSave(save.upgrades), playerName: save.playerName, lastScore: save.lastScore };
+  store.set(save);
+  $('over').classList.remove('show');
+  renderStats(); dealCard();
+}
+
 function countUp(el, to, fmt, ms = 600, from = 0) {
   const start = performance.now();
   const step = now => {
@@ -676,12 +824,19 @@ $('board').addEventListener('click', e => {
 });
 $('popBtn').onclick = () => { $('overlay').classList.remove('show'); dealCard(); };
 $('getCards').onclick = () => {
+  if (!refillsLeft()) return;
+  save.refillsUsed++;
   for (let i = 0; i < CONFIG.cardsPerRefill; i++) save.cards.push(randomRarity());
   store.set(save); renderTray(); tone(700, 0.1, 'triangle');
   if (!round) dealCard();
 };
 $('shopBtn').onclick = () => { renderShop(); $('shop').classList.add('show'); };
 $('shopClose').onclick = () => $('shop').classList.remove('show');
+$('lbBtn').onclick = () => { showBoard($('lbBoard')); $('lb').classList.add('show'); };
+$('lbClose').onclick = () => $('lb').classList.remove('show');
+$('scoreForm').onsubmit = submitScore;
+$('newGame').onclick = newGame;
+$('overShop').onclick = () => { renderShop(); $('shop').classList.add('show'); };
 $('upgrades').addEventListener('click', e => {
   const btn = e.target.closest('button[data-id]');
   if (btn) buyUpgrade(btn.dataset.id);
@@ -689,7 +844,7 @@ $('upgrades').addEventListener('click', e => {
 $('reset').onclick = () => {
   if (!confirm('Reset all progress?')) return;
   save = newSave();
-  store.set(save); $('overlay').classList.remove('show'); renderStats(); dealCard();
+  store.set(save); $('overlay').classList.remove('show'); $('over').classList.remove('show'); renderStats(); dealCard();
 };
 window.addEventListener('resize', () => {
   document.querySelectorAll('.tile:not(.revealed) canvas').forEach(drawCover);

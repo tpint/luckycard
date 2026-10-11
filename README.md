@@ -6,7 +6,7 @@ A scratch-card game prototype in a single HTML file. Each card is a 4×4 grid of
 
 Open `index.html` in a browser. No build step or dependencies.
 
-Progress (💎 total, remaining cards, the card in play with its opened tiles, upgrades, stats) is saved in the browser's `localStorage`. Use **reset progress** at the bottom of the page to start over.
+Progress (💎 total, remaining cards, Get Cards left, the card in play with its opened tiles, upgrades, stats) is saved in the browser's `localStorage`; the on-device leaderboard is under `luckycard-scores`. Use **reset progress** at the bottom of the page to start over.
 
 ## How it works
 
@@ -20,7 +20,9 @@ Progress (💎 total, remaining cards, the card in play with its opened tiles, u
   | Legendary | 20%       | ×5         |
   | Immortal  | 10%       | ×20        |
 
-- You start with 3 cards; **Get Cards** adds 3 more (free in the prototype).
+- You start with 3 cards; **Get Cards** adds 3 more (free in the prototype) and can be used **2 times per game** (the button shows how many are left).
+- **Game over:** when you're out of cards and Get Cards is used up, the game ends. Enter your name to put the 💎 you earned this game on the 🏆 leaderboard (spending 💎 on upgrades doesn't lower your score). **New game** resets 💎, cards and Get Cards but **keeps your upgrades**, so spend your 💎 in the shop before starting over.
+- **🏆 Leaderboard** (button next to Get Cards): top 10 scores, with your latest score highlighted and its rank shown even if it's outside the top 10.
 - The tray shows every card you hold. The card being played right now is first, with a gold glow and a **NOW** tag.
 - Opening a tile feels juicy: the foil cover spins off in shards, the symbol bounces in, sparkles and a ring burst out with a scratch sound and a chime. The burst grows as a symbol gets closer to a match, and the 2nd copy of a symbol (a pair) pops a pink **So close!** cheer with a double haptic tap. With reduce motion on, the tile just glows softly and the cheer fades in place.
 - On a win, 💎 burst out of the winning tiles and fly into the counter — more gems for higher rarities (`gems` in `CONFIG.rarities`). If the device has reduce motion turned on (e.g. Windows "Animation effects" off), the counter glows and counts up instead.
@@ -35,11 +37,38 @@ Tap **⬆ Upgrades** (top right) to spend 💎. Each level costs more than the l
 | 🎯 Top Prize Chance | Raises 1st and 2nd prize odds, lowers 3rd        | 5   | 🍰 25 / 🍩 45 / 🍬 30%          |
 | 💎 Bigger Prizes | +1 to every prize's base reward (before rarity ×)  | 5   | 🍰 8 / 🍩 7 / 🍬 6              |
 
-Lucky Draw only affects newly drawn cards, not cards already in the tray. **reset progress** also resets upgrades.
+Lucky Draw only affects newly drawn cards, not cards already in the tray. Upgrades carry over to a **New game**; **reset progress** resets them too (the leaderboard is kept).
+
+## Online leaderboard (Supabase)
+
+Out of the box the leaderboard is stored on the device (it says "Scores on this device"). To rank **all players** together:
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In the project, open **SQL Editor** and run:
+
+   ```sql
+   create table scores (
+     id bigint generated always as identity primary key,
+     name text not null check (char_length(name) between 1 and 16),
+     score int not null check (score between 0 and 100000),
+     created_at timestamptz not null default now()
+   );
+   alter table scores enable row level security;
+   create policy "anyone can read scores" on scores for select using (true);
+   create policy "anyone can add scores" on scores for insert with check (true);
+   ```
+
+3. In **Project Settings → API**, copy the **Project URL** and the **anon public** key into `CONFIG.leaderboard` in `index.html`:
+
+   ```js
+   leaderboard: { url: 'https://xxxx.supabase.co', key: 'eyJ...', size: 10 },
+   ```
+
+The board then says "All players". The anon key is meant to be public, but since the game runs in the browser, someone determined could post a fake score; fine for a prototype, and you can delete rows in Supabase's **Table Editor**.
 
 ## Tuning
 
-All balance values live in the `CONFIG` object at the top of the `<script>` in `index.html`: grid size, starting cards, refill size, prize odds and rewards, rarity drop rates and multipliers, upgrade costs and effects (`CONFIG.upgrades`), and how often near-misses appear.
+All balance values live in the `CONFIG` object at the top of the `<script>` in `index.html`: grid size, starting cards, refill size, prize odds and rewards, rarity drop rates and multipliers, upgrade costs and effects (`CONFIG.upgrades`), how many times Get Cards can be used (`maxRefills`), the leaderboard (`leaderboard`), and how often near-misses appear.
 
 ## Versioning
 
@@ -48,5 +77,5 @@ The version shown at the bottom-left of the page is set by hand in `index.html` 
 ## Development
 
 - **Codespaces:** on GitHub, **Code → Codespaces → Create codespace on main**. The `.devcontainer` sets up Node, the Live Preview extension (open `index.html` → "Show Preview"), Claude Code, and Playwright with Chromium. Forwarded port 3000 lets you open the game on a phone.
-- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (tile-open burst, pair cheer, refresh resume, gem burst, popup, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
+- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (tile-open burst, pair cheer, Get Cards limit, game over, leaderboard on-device and online against a fake server, refresh resume, gem burst, popup, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
 - **Before every push:** bump the version label, update this README, run `npm test` (see `CLAUDE.md`).
