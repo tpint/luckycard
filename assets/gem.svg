@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- LuckyCard original art: gem -->
+  <g stroke="#1e4f8a" stroke-width="5" stroke-linejoin="round">
+    <path d="M16 46 L38 18 L90 18 L112 46 L64 114 Z" fill="#4cc3ff"/>
+    <path d="M16 46 L112 46" fill="none"/>
+    <path d="M38 18 L50 46 L64 18 L78 46 L90 18" fill="none"/>
+    <path d="M50 46 L64 114 L78 46" fill="none"/>
+  </g>
+  <path d="M40 22 L50 44 L20 44 Z" fill="#b8ecff"/>
+  <path d="M64 22 L76 44 L52 44 Z" fill="#e6f8ff"/>
+  <path d="M54 50 L64 104 L74 50 Z" fill="#8fdcff"/>
+  <path d="M80 50 L106 50 L68 104 Z" fill="#2a9be0"/>
+  <path d="M28 30 L33 24" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+</svg>

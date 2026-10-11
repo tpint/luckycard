@@ -64,7 +64,7 @@
   .prize .label { font-size: 13px; font-weight: 700; color: #c7552a; line-height: 1; }
   .prize:nth-child(2) .label { color: #5a6a80; }
   .prize:nth-child(3) .label { color: #8a7650; }
-  .prize .slots { display: flex; gap: 0; font-size: 14px; margin-top: 3px; }
+  .prize .slots { display: flex; gap: 3px; font-size: 14px; margin-top: 3px; }
   .prize .slots span { filter: grayscale(1) opacity(.35); transition: filter .2s, transform .2s; }
   .prize .slots span.on { filter: none; transform: scale(1.15); }
   .prize .reward { position: absolute; right: -4px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%; background: radial-gradient(#5a3a8c, #2b1d48); border: 3px solid var(--purple-dark); display: grid; place-items: center; font-size: 18px; }
@@ -190,6 +190,12 @@
   /* gems flying to the counter on a win */
   .fly-gem { position: fixed; z-index: 20; font-size: 22px; pointer-events: none; filter: drop-shadow(0 0 6px #7fe3ff); }
 
+  /* art images (CONFIG.prizes[].img, CONFIG.art, CONFIG.rarities[].card) sized like the emoji they replace */
+  .ico { width: 1.15em; height: 1.15em; vertical-align: -.22em; object-fit: contain; pointer-events: none; }
+  .ico.gem { width: 1em; height: 1em; vertical-align: -.15em; }
+  .tile .face .ico { width: 74%; height: 74%; }
+  .card.art { background-size: cover; background-position: center; }
+
   /* tile-open effects: foil shards, sparkles, ripple ring and "So close!" text */
   .fx { position: fixed; z-index: 15; pointer-events: none; left: 0; top: 0; }
   .fx.shard { width: 10px; height: 7px; border-radius: 2px; background: linear-gradient(135deg, #f2f2f6, #a9a9b2); }
@@ -262,7 +268,7 @@
     <div class="title"><span class="info">!</span>LuckyCard</div>
     <div class="top-right">
       <button class="shop-btn" id="shopBtn">⬆ Upgrades</button>
-      <div class="bag" id="bag">💎 <span id="bagCount">0</span></div>
+      <div class="bag" id="bag"><span class="gem-slot">💎</span> <span id="bagCount">0</span></div>
     </div>
   </div>
 
@@ -284,7 +290,7 @@
   </div>
 
   <div class="bottom">
-    <div class="version">v1.3 <!-- bump on every push --></div>
+    <div class="version">v1.4 <!-- bump on every push --></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
   </div>
 </div>
@@ -294,7 +300,7 @@
     <div id="popRarity" style="font-weight:800;text-transform:uppercase;font-size:14px;letter-spacing:.5px"></div>
     <h2 id="popTitle">1st Prize!</h2>
     <div class="big" id="popIcon">🍰</div>
-    <p id="popReward">💎 × 3</p>
+    <p id="popReward"><span class="gem-slot">💎</span> × <span id="popRewardN">3</span></p>
     <button id="popBtn">Next card</button>
   </div>
 </div>
@@ -303,10 +309,10 @@
 <div class="overlay" id="over">
   <div class="popup board-pop">
     <h2>Out of cards!</h2>
-    <p class="earned">You earned <b>💎 <span id="runGems">0</span></b> this game</p>
+    <p class="earned">You earned <b><span class="gem-slot">💎</span> <span id="runGems">0</span></b> this game</p>
     <form id="scoreForm"><input id="nameIn" maxlength="16" placeholder="Your name" autocomplete="nickname"><button id="submitScore">Submit</button></form>
     <div id="overBoard"></div>
-    <div class="over-note">⬆ Upgrades carry over to your next game, 💎 don't, so spend them first!</div>
+    <div class="over-note">⬆ Upgrades carry over to your next game, <span class="gem-slot">💎</span> don't, so spend them first!</div>
     <div class="over-btns"><button class="ghost" id="overShop">⬆ Upgrades</button><button id="newGame">New game</button></div>
   </div>
 </div>
@@ -321,7 +327,7 @@
 
 <div class="overlay" id="shop">
   <div class="popup shop">
-    <div class="shop-head"><h2>Upgrades</h2><div class="bag">💎 <span id="shopBag">0</span></div></div>
+    <div class="shop-head"><h2>Upgrades</h2><div class="bag"><span class="gem-slot">💎</span> <span id="shopBag">0</span></div></div>
     <div id="upgrades"></div>
     <div class="shop-note">Rarity upgrades apply to new cards, not ones already in your tray.</div>
     <button id="shopClose">Close</button>
@@ -342,16 +348,18 @@ const CONFIG = {
   // Chance of winning each prize (1st, 2nd, 3rd) on any card
   prizeOdds: [10, 30, 60],
   prizes: [
-    { name: '1st Prize', icon: '🍰', reward: 3 },
-    { name: '2nd Prize', icon: '🍩', reward: 2 },
-    { name: '3rd Prize', icon: '🍬', reward: 1 },
+    { name: '1st Prize', icon: '🍰', img: 'assets/cake.svg',  reward: 3 },
+    { name: '2nd Prize', icon: '🍩', img: 'assets/donut.svg', reward: 2 },
+    { name: '3rd Prize', icon: '🍬', img: 'assets/candy.svg', reward: 1 },
   ],
-  // Card rarity: drop chance (%), reward multiplier, and how many 💎 fly to the counter on a win
+  // Art files (see assets/). Swap any path for your own image; set it to '' to fall back to the emoji / drawn version.
+  art: { gem: 'assets/gem.svg', cover: 'assets/cover.svg' },
+  // Card rarity: drop chance (%), reward multiplier, how many 💎 fly to the counter on a win, and the card-back art
   rarities: {
-    rare:      { label: 'Rare',      chance: 40, multiplier: 1,  gems: 6 },
-    epic:      { label: 'Epic',      chance: 30, multiplier: 2,  gems: 10 },
-    legendary: { label: 'Legendary', chance: 20, multiplier: 5,  gems: 16 },
-    immortal:  { label: 'Immortal',  chance: 10, multiplier: 20, gems: 26 },
+    rare:      { label: 'Rare',      chance: 40, multiplier: 1,  gems: 6, card: 'assets/card-rare.svg' },
+    epic:      { label: 'Epic',      chance: 30, multiplier: 2,  gems: 10, card: 'assets/card-epic.svg' },
+    legendary: { label: 'Legendary', chance: 20, multiplier: 5,  gems: 16, card: 'assets/card-legendary.svg' },
+    immortal:  { label: 'Immortal',  chance: 10, multiplier: 20, gems: 26, card: 'assets/card-immortal.svg' },
   },
   // Upgrades bought with 💎. Cost of the next level = baseCost * costGrowth ^ currentLevel
   upgrades: {
@@ -403,6 +411,10 @@ function randomRarity(luck = lvl('luck')) {
 const prizeOdds = (crown = lvl('crown')) => CONFIG.prizeOdds.map((o, i) => o + CONFIG.upgrades.crown.prizeOddsBonus[i] * crown);
 const baseReward = (prize, bonus = lvl('prize')) => CONFIG.prizes[prize].reward + CONFIG.upgrades.prize.rewardBonus * bonus;
 const rewardFor = (prize, rarity) => baseReward(prize) * (rarity ? CONFIG.rarities[rarity].multiplier : 1);
+// Art: an <img> for the configured file, or the emoji when no file is set
+const pic = (src, emoji, cls = 'ico') => src ? `<img class="${cls}" src="${src}" alt="${emoji}" draggable="false">` : emoji;
+const prizeIcon = i => pic(CONFIG.prizes[i].img, CONFIG.prizes[i].icon);
+const GEM = pic(CONFIG.art.gem, '💎', 'ico gem');
 
 // The result is decided when the card starts (like the real game's "100% win rate").
 // Whichever tile you open next shows the next symbol in this sequence,
@@ -451,8 +463,8 @@ function renderPrizes() {
   $('prizes').innerHTML = CONFIG.prizes.map((p, i) => `
     <div class="prize" data-i="${i}">
       <div class="label">${p.name}</div>
-      <div class="slots">${`<span>${p.icon}</span>`.repeat(3)}</div>
-      <div class="reward">💎<b>${rewardFor(i, rarity)}</b></div>
+      <div class="slots">${`<span>${prizeIcon(i)}</span>`.repeat(3)}</div>
+      <div class="reward">${GEM}<b>${rewardFor(i, rarity)}</b></div>
     </div>`).join('');
   updatePrizeSlots();
 }
@@ -465,7 +477,8 @@ function updatePrizeSlots() {
   });
 }
 function renderTray() {
-  const card = (r, now) => `<div class="card ${r}${now ? ' current' : ''}" title="${CONFIG.rarities[r].label}${now ? ' (playing now)' : ''}">✦${now ? '<span class="now">NOW</span>' : ''}</div>`;
+  const card = (r, now) => { const art = CONFIG.rarities[r].card;
+    return `<div class="card ${r}${now ? ' current' : ''}${art ? ' art' : ''}" title="${CONFIG.rarities[r].label}${now ? ' (playing now)' : ''}"${art ? ` style="background-image:url('${art}')"` : ''}>${art ? '' : '✦'}${now ? '<span class="now">NOW</span>' : ''}</div>`; };
   const cards = (round ? [card(round.rarity, true)] : []).concat(save.cards.map(r => card(r)));
   $('cards').innerHTML = cards.length ? cards.join('') : '<span class="none">No cards</span>';
   $('getCards').disabled = !refillsLeft();
@@ -477,8 +490,8 @@ const change = (labels, now, next, unit = '') =>
   labels.map((l, i) => `<span class="chg">${l} ${next ? `${now[i]}${unit}→<b>${next[i]}${unit}</b>` : `<b>${now[i]}${unit}</b>`}</span>`).join(' · ');
 const upgradeEffects = {
   luck: next => change(Object.values(CONFIG.rarities).map(r => r.label), pcts(rarityWeights()), next && pcts(rarityWeights(lvl('luck') + 1)), '%'),
-  crown: next => change(CONFIG.prizes.map(p => p.icon), pcts(prizeOdds()), next && pcts(prizeOdds(lvl('crown') + 1)), '%'),
-  prize: next => 'Base 💎 ' + change(CONFIG.prizes.map(p => p.icon), CONFIG.prizes.map((_, i) => baseReward(i)), next && CONFIG.prizes.map((_, i) => baseReward(i, lvl('prize') + 1))),
+  crown: next => change(CONFIG.prizes.map((_, i) => prizeIcon(i)), pcts(prizeOdds()), next && pcts(prizeOdds(lvl('crown') + 1)), '%'),
+  prize: next => `Base ${GEM} ` + change(CONFIG.prizes.map((_, i) => prizeIcon(i)), CONFIG.prizes.map((_, i) => baseReward(i)), next && CONFIG.prizes.map((_, i) => baseReward(i, lvl('prize') + 1))),
 };
 function renderShop() {
   $('shopBag').textContent = save.bag;
@@ -486,12 +499,12 @@ function renderShop() {
     const maxed = lvl(id) >= u.max, cost = upgradeCost(id);
     return `
     <div class="upgrade">
-      <div class="icon">${u.icon}</div>
+      <div class="icon">${u.icon === '💎' ? GEM : u.icon}</div>
       <div class="info">
         <div class="name">${u.name} <small>Lv ${lvl(id)}/${u.max}</small></div>
         <div class="effect">${upgradeEffects[id](!maxed)}</div>
       </div>
-      <button data-id="${id}" ${maxed || save.bag < cost ? 'disabled' : ''}>${maxed ? 'MAX' : `💎 ${cost}`}</button>
+      <button data-id="${id}" ${maxed || save.bag < cost ? 'disabled' : ''}>${maxed ? 'MAX' : `${GEM} ${cost}`}</button>
     </div>`;
   }).join('');
 }
@@ -507,14 +520,18 @@ function buyUpgrade(id) {
 
 function renderStats() {
   $('bagCount').textContent = save.bag;
-  $('stats').textContent = `Played ${save.played} · ` + CONFIG.prizes.map((p, i) => p.icon + save.wins[i]).join(' ');
+  $('stats').innerHTML = `Played ${save.played} · ` + CONFIG.prizes.map((p, i) => prizeIcon(i) + save.wins[i]).join(' ');
 }
 
+// Tile cover art; covers drawn before it loads are redrawn once it's ready
+const coverImg = CONFIG.art.cover ? Object.assign(new Image(), { src: CONFIG.art.cover }) : null;
+if (coverImg) coverImg.onload = () => document.querySelectorAll('.tile:not(.revealed) canvas').forEach(drawCover);
 function drawCover(canvas) {
   const dpr = window.devicePixelRatio || 1;
   const size = canvas.clientWidth * dpr;
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d');
+  if (coverImg && coverImg.complete && coverImg.naturalWidth) { ctx.drawImage(coverImg, size * 0.04, size * 0.04, size * 0.92, size * 0.92); return; }
   const r = size * 0.46, c = size / 2;
   ctx.clearRect(0, 0, size, size);
   const grad = ctx.createRadialGradient(c * 0.8, c * 0.7, r * 0.1, c, c, r);
@@ -540,7 +557,7 @@ function dealCard() {
     requestAnimationFrame(() => board.querySelectorAll('canvas').forEach(drawCover));
     $('ticket').classList.add('no-card');
     $('ticket').dataset.type = '';
-    $('empty').innerHTML = isGameOver() ? 'Game over!<br>💎 ' + save.runGems + ' this game' : 'No cards left.<br>Tap “Get Cards”!';
+    $('empty').innerHTML = isGameOver() ? `Game over!<br>${GEM} ` + save.runGems + ' this game' : 'No cards left.<br>Tap “Get Cards”!';
     renderTray(); renderPrizes();
     if (isGameOver()) showGameOver();
     return;
@@ -565,7 +582,7 @@ function dealCard() {
     const sym = round.tiles[i];
     if (sym !== null) {
       t.dataset.sym = sym;
-      t.querySelector('.face').textContent = CONFIG.prizes[sym].icon;
+      t.querySelector('.face').innerHTML = prizeIcon(sym);
       t.classList.add('revealed');
       t.classList.toggle('pair', round.counts[sym] === 2);
     }
@@ -582,7 +599,7 @@ function reveal(tile) {
   const sym = round.sequence[round.step++];
   round.tiles[[...tile.parentNode.children].indexOf(tile)] = sym;
   tile.dataset.sym = sym;
-  tile.querySelector('.face').textContent = CONFIG.prizes[sym].icon;
+  tile.querySelector('.face').innerHTML = prizeIcon(sym);
   tile.classList.add('revealed');
   round.counts[sym]++;
   store.set(save);
@@ -673,10 +690,10 @@ function win(sym) {
     renderStats();
     $('popRarity').textContent = `${CONFIG.rarities[round.rarity].label} card`;
     $('popTitle').textContent = p.name + '!';
-    $('popIcon').textContent = p.icon.repeat(3);
+    $('popIcon').innerHTML = prizeIcon(sym).repeat(3);
     $('popBtn').textContent = save.cards.length ? 'Next card' : refillsLeft() ? 'OK' : 'See results';
     $('overlay').classList.add('show');
-    countUp($('popReward'), reward, n => `💎 × ${n}`);
+    countUp($('popRewardN'), reward, n => n);
   };
   const shown = n => { $('bagCount').textContent = n; $('bag').classList.add('bump'); setTimeout(() => $('bag').classList.remove('bump'), 120); };
   if (reducedMotion()) {
@@ -709,7 +726,7 @@ function gemBurst(fromEls, count, onArrive, onDone) {
     const x = src.left + src.width / 2, y = src.top + src.height / 2;
     const ang = Math.random() * Math.PI * 2, dist = 30 + Math.random() * 50;
     const g = document.createElement('div');
-    g.className = 'fly-gem'; g.textContent = '💎';
+    g.className = 'fly-gem'; g.innerHTML = GEM;
     g.style.left = x + 'px'; g.style.top = y + 'px';
     document.body.appendChild(g);
     g.animate([
@@ -762,7 +779,7 @@ const scores = {
 const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`); // names come from other players
 async function showBoard(el, mine = save.lastScore) {
   el.innerHTML = '<p class="lb-msg">Loading…</p>';
-  const row = (pos, s, me) => `<li class="${me ? 'me' : ''}"><span class="pos">#${pos}</span><span class="nm">${esc(s.name)}</span><span class="sc">💎 ${s.score}</span></li>`;
+  const row = (pos, s, me) => `<li class="${me ? 'me' : ''}"><span class="pos">#${pos}</span><span class="nm">${esc(s.name)}</span><span class="sc">${GEM} ${s.score}</span></li>`;
   try {
     const top = await scores.top();
     let rows = top.map((s, i) => row(i + 1, s, mine && s.id === mine.id));
@@ -850,6 +867,7 @@ window.addEventListener('resize', () => {
   document.querySelectorAll('.tile:not(.revealed) canvas').forEach(drawCover);
 });
 
+document.querySelectorAll('.gem-slot').forEach(el => el.innerHTML = GEM);
 renderStats(); renderTray(); renderPrizes();
 (document.fonts ? document.fonts.ready : Promise.resolve()).then(dealCard);
 </script>

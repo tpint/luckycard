@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- LuckyCard original art: pink frosted donut -->
+  <g stroke="#5b3a2e" stroke-width="8" stroke-linejoin="round">
+    <ellipse cx="128" cy="138" rx="104" ry="92" fill="#e8a25c"/>
+    <path d="M40 120 C40 64 216 64 216 120 C222 150 204 150 200 166 C196 186 176 172 168 190 C156 212 136 190 128 204 C116 220 102 196 90 196 C70 196 74 172 58 170 C40 166 34 146 40 120 Z" fill="#ff8fc0"/>
+    <ellipse cx="128" cy="128" rx="34" ry="26" fill="#c87a3c"/>
+  </g>
+  <ellipse cx="128" cy="124" rx="26" ry="16" fill="#9a5a28"/>
+  <g stroke-width="8" stroke-linecap="round">
+    <path d="M76 96 l14 -6" stroke="#fff27a"/><path d="M160 84 l12 8" stroke="#7fe3ff"/>
+    <path d="M182 128 l4 14" stroke="#fff"/><path d="M84 150 l-10 8" stroke="#7fe3ff"/>
+    <path d="M118 80 l14 2" stroke="#fff"/><path d="M150 166 l14 -4" stroke="#fff27a"/>
+    <path d="M60 124 l2 -14" stroke="#b07ff0"/><path d="M196 104 l-4 -12" stroke="#b07ff0"/>
+    <path d="M112 172 l-10 -8" stroke="#b07ff0"/>
+  </g>
+  <path d="M70 92 C86 76 110 70 128 70" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" opacity=".7"/>
+</svg>
