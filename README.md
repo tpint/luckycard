@@ -1,6 +1,8 @@
 # LuckyCard
 
-A scratch-card game prototype: one HTML file plus its art in `assets/`. Each card is a 4×4 grid of tiles; tap tiles to open them and find **3 matching patterns** to win that prize. Every card wins (100% win rate) — the prize tier and card rarity decide how much.
+A scratch-card game prototype: one HTML file plus its art in `assets/`. Each card is a 4×4 grid of tiles; tap tiles to open them, in any order, and find **3 matching patterns** to win that prize. Every card wins (100% win rate) — the prize tier and card rarity decide how much.
+
+Like a real scratch card, every tile gets its symbol when the card starts: 3 of the winning prize, 0–2 of each other prize (so only the winner can match, and pairs of the others make near-misses), and "no prize" blanks (a faint ✦) on the rest. Tap **⚡ Open all** to scratch the remaining tiles in one go.
 
 ## Play
 
@@ -21,11 +23,12 @@ Progress (💎 total, remaining cards, Get Cards left, the card in play with its
   | Immortal  | 10%       | ×20        |
 
 - You start with 3 cards; **Get Cards** adds 3 more (free in the prototype) and can be used **2 times per game** (the button shows how many are left).
-- **Game over:** when you're out of cards and Get Cards is used up, the game ends. Enter your name to put the 💎 you earned this game on the 🏆 leaderboard (spending 💎 on upgrades doesn't lower your score). **New game** resets 💎, cards and Get Cards but **keeps your upgrades**, so spend your 💎 in the shop before starting over.
+- **Game over:** when you're out of cards and Get Cards is used up, the game ends. Enter your name to put the 💎 you earned this game on the 🏆 leaderboard (spending 💎 on upgrades doesn't lower your score). **New game** keeps your 💎 and upgrades and resets cards, Get Cards and the score.
+- **💎 counters:** the header shows all your 💎 (kept between games, spent on upgrades); **This game** next to the slogan shows what you've earned in the current game, which is your leaderboard score.
 - **🏆 Leaderboard** (button next to Get Cards): top 10 scores, with your latest score highlighted and its rank shown even if it's outside the top 10.
 - The tray shows every card you hold. The card being played right now is first, with a gold glow and a **NOW** tag.
 - Opening a tile feels juicy: the foil cover spins off in shards, the symbol bounces in, sparkles and a ring burst out with a scratch sound and a chime. The burst grows as a symbol gets closer to a match, and the 2nd copy of a symbol (a pair) pops a pink **So close!** cheer with a double haptic tap. With reduce motion on, the tile just glows softly and the cheer fades in place.
-- On a win, 💎 burst out of the winning tiles and fly into the counter — more gems for higher rarities (`gems` in `CONFIG.rarities`). If the device has reduce motion turned on (e.g. Windows "Animation effects" off), the counter glows and counts up instead.
+- On a win there's **no popup to tap**: the rest of the card reveals itself, a ribbon on the card shows the prize and 💎 won, and 💎 burst out of the winning tiles into the counters (more gems for higher rarities: `gems` in `CONFIG.rarities`). The next card then deals itself; tap the finished card to skip ahead. If the device has reduce motion turned on (e.g. Windows "Animation effects" off), the tiles turn over at once and the counters glow and count up instead of flying gems.
 
 ## Upgrades
 
@@ -43,7 +46,7 @@ Tap **⬆ Upgrades** (top right) to spend 💎. Each level costs more than the l
 | 🎯 Top Prize Chance | Raises 1st and 2nd prize odds, lowers 3rd        | 5   | 🍰 25 / 🍩 45 / 🍬 30%          |
 | 💎 Bigger Prizes | +1 to every prize's base reward (before rarity ×)  | 5   | 🍰 8 / 🍩 7 / 🍬 6              |
 
-Lucky Draw only affects newly drawn cards, not cards already in the tray. Upgrades carry over to a **New game**; **reset progress** resets them too (the leaderboard is kept).
+Lucky Draw only affects newly drawn cards, not cards already in the tray. 💎 and upgrades carry over to a **New game**; **reset progress** resets both (the leaderboard is kept).
 
 ## Online leaderboard (Supabase)
 
@@ -81,7 +84,7 @@ All graphics are original SVG files in `assets/`, drawn for LuckyCard:
 
 | File | Used for |
 |---|---|
-| `cake.svg`, `donut.svg`, `candy.svg` | Prize symbols (tiles, prize boxes, popup, stats) |
+| `cake.svg`, `donut.svg`, `candy.svg` | Prize symbols (tiles, prize boxes, win ribbon, stats) |
 | `gem.svg` | 💎 everywhere (counter, rewards, flying gems, shop, leaderboard) |
 | `cover.svg` | Scratch-off tile cover |
 | `card-rare.svg`, `card-epic.svg`, `card-legendary.svg`, `card-immortal.svg` | Card backs in the tray |
@@ -90,7 +93,7 @@ All graphics are original SVG files in `assets/`, drawn for LuckyCard:
 
 ## Tuning
 
-All balance values live in the `CONFIG` object at the top of the `<script>` in `index.html`: art file paths, grid size, starting cards, refill size, prize odds and rewards, rarity drop rates and multipliers, upgrade costs and effects (`CONFIG.upgrades`), how many times Get Cards can be used (`maxRefills`), the leaderboard (`leaderboard`), and how often near-misses appear.
+All balance values live in the `CONFIG` object at the top of the `<script>` in `index.html`: art file paths, grid size, starting cards, refill size, prize odds and rewards, rarity drop rates and multipliers, upgrade costs and effects (`CONFIG.upgrades`), how many times Get Cards can be used (`maxRefills`), the leaderboard (`leaderboard`), how often near-misses appear (`loserCountWeights`), and the win pacing (`revealAllStagger`, `nextCardDelay`).
 
 ## Versioning
 
@@ -99,5 +102,5 @@ The version shown at the bottom-left of the page is set by hand in `index.html` 
 ## Development
 
 - **Codespaces:** on GitHub, **Code → Codespaces → Create codespace on main**. The `.devcontainer` sets up Node, the Live Preview extension (open `index.html` → "Show Preview"), Claude Code, and Playwright with Chromium. Forwarded port 3000 lets you open the game on a phone.
-- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (art loads, tile-open burst, pair cheer, Get Cards limit, game over, leaderboard online and on-device against a fake Supabase (tests never send scores to the real leaderboard), refresh resume, gem burst, popup, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
+- **Tests:** `npm test` plays the game in a headless browser at phone size, checks the main flows (art loads, board makeup, tile-open burst, pair cheer, Open all, reveal-all, auto next card, old-save conversion, Get Cards limit, game over, leaderboard online and on-device against a fake Supabase (tests never send scores to the real leaderboard), refresh resume, gem burst, win ribbon, empty state, shop, reduced motion) and saves screenshots to `tests/screenshots/`. Locally, run `npm install && npx playwright install chromium` once first. To use a Chromium that's already installed, set `CHROMIUM_PATH` to its executable.
 - **Before every push:** bump the version label, update this README, run `npm test` (see `CLAUDE.md`).
