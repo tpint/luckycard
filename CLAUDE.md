@@ -18,3 +18,4 @@ Scratch-card game prototype: all HTML, CSS and JS is in `index.html`; original S
 1. Bump the version label in `index.html` (`<div class="version">vX.Y</div>`) so the user can tell which build they're testing.
 2. Update `README.md` to reflect the change.
 3. Run `npm test` first.
+4. Rename the Claude Code session to match the new version, e.g. "LuckyCard v1.8" (`set_session_title`), if the tool is available.

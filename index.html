@@ -290,7 +290,7 @@
   </div>
 
   <div class="bottom">
-    <div class="version">v1.7 <!-- bump on every push --></div>
+    <div class="version">v1.8 <!-- bump on every push --></div>
     <div class="stats"><span id="stats"></span><br><button class="reset" id="reset">reset progress</button></div>
   </div>
 </div>
@@ -364,11 +364,11 @@ const CONFIG = {
   },
   // Upgrades bought with 💎. Cost of the next level = baseCost * costGrowth ^ currentLevel
   upgrades: {
-    luck:  { name: 'Lucky Draw',    icon: '🍀', max: 10, baseCost: 20, costGrowth: 1.6,
+    luck:  { name: 'Lucky Draw',    icon: '🍀', max: 10, baseCost: 10, costGrowth: 1.6,
              rarityBonus: { epic: 2, legendary: 2, immortal: 2 } }, // added to rarity weights per level
-    crown: { name: 'Top Prize Chance', icon: '🎯', max: 5,  baseCost: 25, costGrowth: 1.7,
+    crown: { name: 'Top Prize Chance', icon: '🎯', max: 5,  baseCost: 12.5, costGrowth: 1.7,
              prizeOddsBonus: [3, 3, -6] },                          // added to prizeOdds per level
-    prize: { name: 'Bigger Prizes', icon: '💎', max: 5,  baseCost: 40, costGrowth: 1.8,
+    prize: { name: 'Bigger Prizes', icon: '💎', max: 5,  baseCost: 20, costGrowth: 1.8,
              rewardBonus: 1 },                                      // added to every prize's base reward per level
   },
 };
