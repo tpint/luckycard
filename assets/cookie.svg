@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <!-- LuckyCard original art: chocolate chip cookie (decoy) -->
-  <path d="M128 30 C186 30 226 72 226 128 C226 186 184 226 128 226 C70 226 30 184 30 128 C30 74 72 30 128 30 Z" fill="#e8a85c" stroke="#5b3a2e" stroke-width="8"/>
-  <path d="M128 46 C176 46 210 82 210 128" fill="none" stroke="#f5c98a" stroke-width="10" stroke-linecap="round"/>
-  <g fill="#5b3a2e">
-    <circle cx="96" cy="92" r="12"/><circle cx="156" cy="84" r="10"/><circle cx="178" cy="140" r="13"/>
-    <circle cx="120" cy="138" r="11"/><circle cx="80" cy="160" r="10"/><circle cx="140" cy="188" r="12"/><circle cx="104" cy="196" r="7"/>
-  </g>
-</svg>

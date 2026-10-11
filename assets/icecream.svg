@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <!-- LuckyCard original art: ice cream cone (decoy) -->
-  <g stroke="#5b3a2e" stroke-width="8" stroke-linejoin="round">
-    <path d="M78 120 L178 120 L128 236 Z" fill="#f2b765"/>
-    <path d="M94 150 L150 120 M104 176 L168 140 M116 204 L160 180 M162 150 L106 120 M150 178 L92 144" fill="none" stroke-width="5"/>
-    <path d="M70 124 C52 112 58 84 82 82 C80 50 112 34 136 46 C160 34 192 52 186 82 C208 86 210 114 188 124 C170 136 150 122 128 132 C106 122 88 136 70 124 Z" fill="#ffd1e4"/>
-  </g>
-  <path d="M100 64 Q112 54 126 54" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
-</svg>
